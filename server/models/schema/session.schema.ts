@@ -5,13 +5,13 @@ import { Schema } from 'mongoose';
  *
  * This schema defines the structure for storing sessions in the database.
  * Each session includes the following fields:
- * - `_id`: The unique identifier for the session.
+ * - `sessionID`: The unique identifier for the session.
  * - `versions`: The versions of the session.
  */
 const sessionSchema: Schema = new Schema(
   {
-    _id: {
-      type: Schema.Types.ObjectId,
+    sessionID: {
+      type: String,
       required: true,
     },
     versions: {
