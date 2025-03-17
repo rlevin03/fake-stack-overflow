@@ -7,6 +7,7 @@ import { Schema } from 'mongoose';
  * Each session includes the following fields:
  * - `sessionID`: The unique identifier for the session.
  * - `versions`: The versions of the session.
+ * records the timestamp of the creation and the last update.
  */
 const sessionSchema: Schema = new Schema(
   {
@@ -19,7 +20,7 @@ const sessionSchema: Schema = new Schema(
       default: [],
     },
   },
-  { collection: 'Session' },
+  { collection: 'Session', timestamps: true },
 );
 
 export default sessionSchema;
