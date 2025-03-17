@@ -8,6 +8,18 @@ import { Schema } from 'mongoose';
  * - `username`: The username of the user.
  * - `password`: The encrypted password securing the user's account.
  * - `dateJoined`: The date the user joined the platform.
+ * - 'biography': The user's biography.
+ * - 'questionsAsked': The questions the user has asked.
+ * - 'questionsAnswered': The questions the user has answered.
+ * - 'badges': The badges the user has earned.
+ * - 'points': The points the user has earned.
+ * - 'questionsUpvoted': list of questions the user has upvoted
+ * - 'questionsDownvoted': list of questions the user has downvoted.
+ * - 'answersUpvoted': list of answers the user has upvoted.
+ * - 'answersDownvoted': list of answers the user has downvoted.
+ * - 'sessionsAttended': list of sessions the user has attended.
+ * - 'aiToggler': boolean to toggle the AI on or off.
+ * - 'bookmarkedQuestions': list of questions the user has bookmarked.
  */
 const userSchema: Schema = new Schema(
   {
@@ -25,6 +37,50 @@ const userSchema: Schema = new Schema(
     biography: {
       type: String,
       default: '',
+    },
+    questionsAsked: {
+      type: [{ type: Schema.Types.ObjectId, ref: 'Question' }],
+      default: [],
+    },
+    questionsAnswered: {
+      type: [{ type: Schema.Types.ObjectId, ref: 'Answer' }],
+      default: [],
+    },
+    badges: {
+      type: [{ type: Schema.Types.ObjectId, ref: 'Badge' }],
+      default: [],
+    },
+    points: {
+      type: Number,
+      default: 0,
+    },
+    questionsUpvoted: {
+      type: [{ type: Schema.Types.ObjectId, ref: 'Question' }],
+      default: [],
+    },
+    questionsDownvoted: {
+      type: [{ type: Schema.Types.ObjectId, ref: 'Question' }],
+      default: [],
+    },
+    answersUpvoted: {
+      type: [{ type: Schema.Types.ObjectId, ref: 'Answer' }],
+      default: [],
+    },
+    answersDownvoted: {
+      type: [{ type: Schema.Types.ObjectId, ref: 'Answer' }],
+      default: [],
+    },
+    sessionsAttended: {
+      type: [String],
+      default: [],
+    },
+    aiToggler: {
+      type: Boolean,
+      default: true,
+    },
+    bookmarkedQuestions: {
+      type: [{ type: Schema.Types.ObjectId, ref: 'Question' }],
+      default: [],
     },
   },
   { collection: 'User' },
