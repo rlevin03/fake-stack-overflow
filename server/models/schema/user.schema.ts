@@ -20,6 +20,7 @@ import { Schema } from 'mongoose';
  * - 'sessionsAttended': list of sessions the user has attended.
  * - 'aiToggler': boolean to toggle the AI on or off.
  * - 'bookmarkedQuestions': list of questions the user has bookmarked.
+ * - 'preferences': vector conisting of tags interested in.
  */
 const userSchema: Schema = new Schema(
   {
@@ -80,6 +81,10 @@ const userSchema: Schema = new Schema(
     },
     bookmarkedQuestions: {
       type: [{ type: Schema.Types.ObjectId, ref: 'Question' }],
+      default: [],
+    },
+    preferences: {
+      type: [Number],
       default: [],
     },
   },
