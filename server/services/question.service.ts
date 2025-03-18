@@ -23,6 +23,7 @@ import {
   sortQuestionsByNewest,
   sortQuestionsByUnanswered,
 } from '../utils/sort.util';
+import UserModel from '../models/users.model';
 
 /**
  * Checks if keywords exist in a question's title or text.
@@ -158,6 +159,10 @@ export const fetchAndIncrementQuestionViewsById = async (
 export const saveQuestion = async (question: Question): Promise<QuestionResponse> => {
   try {
     const result: DatabaseQuestion = await QuestionModel.create(question);
+    await UserModel.updateOne(
+      { username: question.askedBy },
+      { $push: { questionsAsked: result._id }, $inc: { points: 10 } },
+    );
 
     return result;
   } catch (error) {
@@ -228,6 +233,14 @@ export const addVoteToQuestion = async (
       { _id: qid },
       updateOperation,
       { new: true },
+    );
+
+    await UserModel.updateOne(
+      { username },
+      {
+        $push: { [voteType === 'upvote' ? 'questionsUpvoted' : 'questionsDownvoted']: qid },
+        $inc: { points: 1 },
+      },
     );
 
     if (!result) {
