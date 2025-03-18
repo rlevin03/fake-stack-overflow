@@ -9,6 +9,7 @@ import {
 } from '../types/types';
 import AnswerModel from '../models/answers.model';
 import QuestionModel from '../models/questions.model';
+import UserModel from '../models/users.model';
 
 /**
  * Records the most recent answer time for a given question based on its answers.
@@ -37,6 +38,10 @@ export const getMostRecentAnswerTime = (
 export const saveAnswer = async (answer: Answer): Promise<AnswerResponse> => {
   try {
     const result: DatabaseAnswer = await AnswerModel.create(answer);
+    await UserModel.updateOne(
+      { username: answer.ansBy },
+      { $push: { questionsAnswered: result._id }, $inc: { points: 5 } },
+    );
     return result;
   } catch (error) {
     return { error: 'Error when saving an answer' };
@@ -73,3 +78,5 @@ export const addAnswerToQuestion = async (
     return { error: 'Error when adding answer to question' };
   }
 };
+
+// TODO: add functionality to upvote and downvote answers smh
