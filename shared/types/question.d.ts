@@ -82,7 +82,7 @@ export type VoteInterface = { msg: string; upVotes: string[]; downVotes: string[
  * - Either an object with the vote success message, updated upVotes,
  *   and updated downVotes, or an error message.
  */
-export type VoteResponse = VoteInterface | { error: string };
+export type QuestionVoteResponse = VoteInterface | { error: string };
 
 /**
  * Interface for the request query to find questions using a search string.
@@ -125,7 +125,7 @@ export interface AddQuestionRequest extends Request {
  * - `qid`: The unique identifier of the question being voted on (body).
  * - `username`: The username of the user casting the vote (body).
  */
-export interface VoteRequest extends Request {
+export interface QuestionVoteRequest extends Request {
   body: {
     qid: string;
     username: string;

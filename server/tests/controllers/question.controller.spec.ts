@@ -11,8 +11,8 @@ import {
   PopulatedDatabaseAnswer,
   PopulatedDatabaseQuestion,
   Question,
+  QuestionVoteResponse,
   Tag,
-  VoteResponse,
 } from '../../types/types';
 
 const addVoteToQuestionSpy = jest.spyOn(questionUtil, 'addVoteToQuestion');
@@ -82,6 +82,8 @@ const ans1: PopulatedDatabaseAnswer = {
   ansBy: 'answer1_user',
   ansDateTime: new Date('2024-06-09'), // The mock date is string type but in the actual implementation it is a Date type
   comments: [],
+  upVotes: [],
+  downVotes: [],
 };
 
 const ans2: PopulatedDatabaseAnswer = {
@@ -90,6 +92,8 @@ const ans2: PopulatedDatabaseAnswer = {
   ansBy: 'answer2_user',
   ansDateTime: new Date('2024-06-10'),
   comments: [],
+  upVotes: [],
+  downVotes: [],
 };
 
 const ans3: PopulatedDatabaseAnswer = {
@@ -98,6 +102,8 @@ const ans3: PopulatedDatabaseAnswer = {
   ansBy: 'answer3_user',
   ansDateTime: new Date('2024-06-11'),
   comments: [],
+  upVotes: [],
+  downVotes: [],
 };
 
 const ans4: PopulatedDatabaseAnswer = {
@@ -106,6 +112,8 @@ const ans4: PopulatedDatabaseAnswer = {
   ansBy: 'answer4_user',
   ansDateTime: new Date('2024-06-14'),
   comments: [],
+  upVotes: [],
+  downVotes: [],
 };
 
 const MOCK_POPULATED_QUESTIONS: PopulatedDatabaseQuestion[] = [
@@ -368,7 +376,7 @@ describe('Test questionController', () => {
       };
 
       // First upvote the question
-      let mockResponseWithBothVotes: VoteResponse = {
+      let mockResponseWithBothVotes: QuestionVoteResponse = {
         msg: 'Question upvoted successfully',
         upVotes: ['new-user'],
         downVotes: [],
@@ -481,7 +489,7 @@ describe('Test questionController', () => {
       };
 
       // First downvote the question
-      let mockResponse: VoteResponse = {
+      let mockResponse: QuestionVoteResponse = {
         msg: 'Question downvoted successfully',
         downVotes: ['new-user'],
         upVotes: [],

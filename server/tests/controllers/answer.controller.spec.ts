@@ -28,6 +28,8 @@ describe('POST /addAnswer', () => {
       ansBy: 'dummyUserId',
       ansDateTime: new Date('2024-06-03'),
       comments: [],
+      upVotes: [],
+      downVotes: [],
     };
     saveAnswerSpy.mockResolvedValueOnce(mockAnswer);
 
@@ -168,6 +170,8 @@ describe('POST /addAnswer', () => {
       ansBy: 'dummyUserId',
       ansDateTime: new Date('2024-06-03'),
       comments: [],
+      upVotes: [],
+      downVotes: [],
     };
 
     saveAnswerSpy.mockResolvedValueOnce(mockAnswer);
@@ -195,6 +199,8 @@ describe('POST /addAnswer', () => {
       ansBy: 'dummyUserId',
       ansDateTime: new Date('2024-06-03'),
       comments: [],
+      upVotes: [],
+      downVotes: [],
     };
 
     const mockQuestion = {

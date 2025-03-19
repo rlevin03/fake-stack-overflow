@@ -9,7 +9,7 @@ import {
   PopulatedDatabaseQuestion,
   Question,
   QuestionResponse,
-  VoteResponse,
+  QuestionVoteResponse,
 } from '../types/types';
 import AnswerModel from '../models/answers.model';
 import QuestionModel from '../models/questions.model';
@@ -175,13 +175,13 @@ export const saveQuestion = async (question: Question): Promise<QuestionResponse
  * @param {string} qid - The question ID
  * @param {string} username - The username who voted
  * @param {'upvote' | 'downvote'} voteType - The vote type
- * @returns {Promise<VoteResponse>} - The updated vote result
+ * @returns {Promise<QuestionVoteResponse>} - The updated vote result
  */
 export const addVoteToQuestion = async (
   qid: string,
   username: string,
   voteType: 'upvote' | 'downvote',
-): Promise<VoteResponse> => {
+): Promise<QuestionVoteResponse> => {
   let updateOperation: QueryOptions;
 
   if (voteType === 'upvote') {
