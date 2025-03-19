@@ -1,3 +1,4 @@
+import { QueryOptions } from 'mongoose';
 import {
   Answer,
   AnswerResponse,
@@ -11,7 +12,6 @@ import {
 import AnswerModel from '../models/answers.model';
 import QuestionModel from '../models/questions.model';
 import UserModel from '../models/users.model';
-import { QueryOptions } from 'mongoose';
 
 /**
  * Records the most recent answer time for a given question based on its answers.

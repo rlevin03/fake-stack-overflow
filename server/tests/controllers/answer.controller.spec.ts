@@ -19,6 +19,8 @@ describe('POST /addAnswer', () => {
         text: 'This is a test answer',
         ansBy: 'dummyUserId',
         ansDateTime: new Date('2024-06-03'),
+        downVotes: [],
+        upVotes: [],
       },
     };
 
