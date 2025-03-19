@@ -57,14 +57,14 @@ export type AnswerResponse = DatabaseAnswer | { error: string };
 /**
  * Type representing an object with the vote success message, updated upVotes,
  */
-export type VoteInterface = { msg: string; upVotes: string[]; downVotes: string[] };
+export type AnswerVoteInterface = { msg: string; upVotes: string[]; downVotes: string[] };
 
 /**
  * Type representing possible responses for a vote-related operation.
  * - Either an object with the vote success message, updated upVotes,
  *   and updated downVotes, or an error message.
  */
-export type AnswerVoteResponse = VoteInterface | { error: string };
+export type AnswerVoteResponse = AnswerVoteInterface | { error: string };
 
 /**
  * Interface for the request body when upvoting or downvoting an Answer.
