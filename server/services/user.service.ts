@@ -28,6 +28,7 @@ export const saveUser = async (user: User): Promise<UserResponse> => {
       username: result.username,
       dateJoined: result.dateJoined,
       biography: result.biography,
+      points: result.points, 
     };
 
     return safeUser;
@@ -147,5 +148,46 @@ export const updateUser = async (
     return updatedUser;
   } catch (error) {
     return { error: `Error occurred when updating user: ${error}` };
+  }
+};
+
+/**
+ * Returns up to 10 users with the highest points, sorted descending.
+ * @returns {Promise<SafeDatabaseUser[] | { error: string }>} - Either an array of users or an error object.
+ */
+export const getTop10ByPoints = async (): Promise<SafeDatabaseUser[] | { error: string }> => {
+  try {
+    const top10 = await UserModel.find()
+      .select('-password')
+      .sort({ points: -1 })
+      .limit(10);
+
+    return top10;
+  } catch (err) {
+    return { error: `Error retrieving top 10 by points: ${err}` };
+  }
+};
+
+/**
+ * Returns the rank of a user by username, based on how many users have more points.
+ * @param {string} username - The username whose rank we want to find.
+ * @returns {Promise<{ rank: number } | { error: string }>} - Either an object with `rank` or an error object.
+ */
+export const getRankForUser = async (
+  username: string,
+): Promise<{ rank: number } | { error: string }> => {
+  try {
+    const user = await UserModel.findOne({ username });
+    if (!user) {
+      return { error: 'User not found' };
+    }
+
+    // Count how many users have strictly more points than this user
+    const higherPointsCount = await UserModel.countDocuments({ points: { $gt: user.points } });
+    const rank = higherPointsCount + 1;
+
+    return { rank };
+  } catch (err) {
+    return { error: `Error retrieving user rank: ${err}` };
   }
 };
