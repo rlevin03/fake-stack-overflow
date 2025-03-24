@@ -10,10 +10,12 @@ import {
 import {
   deleteUserByUsername,
   getUserByUsername,
+  getUserRecommendations,
   getUsersList,
   loginUser,
   saveUser,
   updateUser,
+  updateUserPreferences,
 } from '../services/user.service';
 
 const userController = (socket: FakeSOSocket) => {
@@ -238,6 +240,60 @@ const userController = (socket: FakeSOSocket) => {
     }
   };
 
+  /**
+   * Updates a user's preference vector by applying index-wise updates.
+   * @param req The request containing userId and updates (array of { index, value }).
+   * @param res The response, either confirming the update or returning an error.
+   * @returns A promise resolving to void.
+   */
+  const updatePreferences = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const { userId, updates } = req.body;
+
+      if (!userId || !Array.isArray(updates)) {
+        res.status(400).send('Invalid request body: userId and updates are required');
+        return;
+      }
+
+      const result = await updateUserPreferences(userId, updates);
+
+      if ('error' in result) {
+        throw new Error(result.error);
+      }
+
+      res.status(200).json(result);
+    } catch (error) {
+      res.status(500).send(`Error when updating user preferences: ${error}`);
+    }
+  };
+
+  /**
+   * Retrieves personalized question recommendations for a user.
+   * @param req The request containing the userId as a route parameter.
+   * @param res The response, returning an ordered list of recommended questions.
+   * @returns A promise resolving to void.
+   */
+  const getRecommendations = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const { userId } = req.params;
+
+      if (!userId) {
+        res.status(400).send('Missing userId');
+        return;
+      }
+
+      const recommendations = await getUserRecommendations(userId);
+
+      if ('error' in recommendations) {
+        throw new Error(recommendations.error);
+      }
+
+      res.status(200).json(recommendations);
+    } catch (error) {
+      res.status(500).send(`Error when retrieving recommendations: ${error}`);
+    }
+  };
+
   // Define routes for the user-related operations.
   router.post('/signup', createUser);
   router.post('/login', userLogin);
@@ -246,6 +302,9 @@ const userController = (socket: FakeSOSocket) => {
   router.get('/getUsers', getUsers);
   router.delete('/deleteUser/:username', deleteUser);
   router.patch('/updateBiography', updateBiography);
+  router.patch('/updatePreferences', updatePreferences);
+  router.get('/getRecommendations/:userId', getRecommendations);
+
   return router;
 };
 
