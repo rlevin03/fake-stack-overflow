@@ -1,17 +1,161 @@
-/* Add CSS */
-
-/* Add global CSS here */
-/* Add CSS stylesheet */
-
+/* 1) Global Resets & Font */
 * {
+  box-sizing: border-box;
   font-family: Arial, Helvetica, sans-serif;
+  margin: 0;
+  padding: 0;
 }
 
-html {
-  height: 99%;
-}
-
+html,
 body,
 #root {
   height: 100%;
+}
+
+/* 2) Page & Card Layout */
+.page-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem;
+}
+
+.profile-card {
+  background-color: #fff;
+  border-radius: 4px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  padding: 1rem;
+  margin-bottom: 2rem;
+}
+
+/* 3) Buttons */
+.login-button,
+.delete-button,
+.cancel-button,
+.toggle-password-button {
+  cursor: pointer;
+  padding: 0.5rem 1rem;
+  margin: 0.25rem;
+  border-radius: 4px;
+  border: none;
+  font-size: 0.9rem;
+}
+
+.login-button {
+  background-color: #007bff;
+  color: #fff;
+}
+
+.login-button:hover {
+  background-color: #0056b3;
+}
+
+.delete-button {
+  background-color: #dc3545;
+  color: #fff;
+}
+
+.delete-button:hover {
+  background-color: #c82333;
+}
+
+.cancel-button {
+  background-color: #6c757d;
+  color: #fff;
+}
+
+.cancel-button:hover {
+  background-color: #5a6268;
+}
+
+.toggle-password-button {
+  background-color: #17a2b8;
+  color: #fff;
+}
+
+.toggle-password-button:hover {
+  background-color: #138496;
+}
+
+/* 4) Leaderboard Styling */
+.leaderboard-container {
+  width: 300px;
+  text-align: left;
+  margin: 0 auto;
+}
+
+/* 
+  Use default decimal list styling. 
+  We place the numbering outside the content box 
+  (so you can control spacing with padding-left). 
+*/
+.leaderboard-list {
+  list-style-type: decimal;
+  list-style-position: outside; /* Show numbering to the left of the li */
+  padding-left: 1.5rem;         /* Indent the list so numbers are visible */
+  margin-top: 1rem;
+  margin-bottom: 1rem;
+}
+
+/*
+  Remove flex so the list markers show properly.
+  We'll float points to the right instead.
+*/
+.leaderboard-item {
+  position: relative;
+  margin: 0.25rem 0;
+  padding-bottom: 0.25rem;
+  border-bottom: 1px solid #eee;
+}
+
+/* Make username normal weight */
+.leaderboard-username {
+  font-weight: normal;
+}
+
+/*
+  Float the points to the right side
+  so you get a left=Username / right=Points layout.
+*/
+.leaderboard-points {
+  float: right;
+  color: #555;
+}
+
+.rank-info {
+  margin-top: 1rem;
+  font-style: italic;
+  text-align: center;
+}
+
+/* 5) Success/Error Messages */
+.success-message {
+  color: green;
+  margin: 0.5rem 0;
+}
+
+.error-message {
+  color: red;
+  margin: 0.5rem 0;
+}
+
+/* 6) Modal Example */
+.modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 999; /* ensure it appears above other elements */
+}
+
+.modal-content {
+  background: #fff;
+  padding: 2rem;
+  border-radius: 4px;
+  max-width: 500px;
+  width: 90%;
 }

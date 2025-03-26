@@ -1,6 +1,19 @@
-import React from 'react';
+// client/src/components/ProfileSettings/index.tsx
+import React, { useEffect, useState } from 'react';
 import './index.css';
 import useProfileSettings from '../../hooks/useProfileSettings';
+import {
+  getTop10Leaderboard,
+  getUserRank,
+  LeaderboardUser,
+} from '../../services/leaderboardService';
+
+interface UserData {
+  username: string;
+  biography?: string;
+  dateJoined?: string;
+  // Add other fields as needed...
+}
 
 const ProfileSettings: React.FC = () => {
   const {
@@ -17,17 +30,45 @@ const ProfileSettings: React.FC = () => {
     canEditProfile,
     showPassword,
     togglePasswordVisibility,
-
     setEditBioMode,
     setNewBio,
     setNewPassword,
     setConfirmNewPassword,
     setShowConfirmation,
-
     handleResetPassword,
     handleUpdateBiography,
     handleDeleteUser,
   } = useProfileSettings();
+
+  // Leaderboard state
+  const [leaderboard, setLeaderboard] = useState<LeaderboardUser[]>([]);
+  const [userRank, setUserRank] = useState<number | null>(null);
+
+  // Fetch the leaderboard once loading is finished,
+  // and fetch user rank only if userData is available.
+  useEffect(() => {
+    if (!loading) {
+      const fetchData = async () => {
+        try {
+          const top10 = await getTop10Leaderboard();
+
+          // Sort by points descending, just in case the backend isn't sorted
+          const sorted = [...top10].sort((a, b) => b.points - a.points);
+          setLeaderboard(sorted);
+
+          // If we have a user, also fetch their rank
+          if (userData?.username) {
+            const rank = await getUserRank(userData.username);
+            setUserRank(rank);
+          }
+        } catch (err) {
+          console.error('Error fetching leaderboard:', err);
+        }
+      };
+
+      fetchData();
+    }
+  }, [loading, userData]);
 
   if (loading) {
     return (
@@ -40,11 +81,13 @@ const ProfileSettings: React.FC = () => {
   }
 
   return (
-    <div className='page-container'>
-      <div className='profile-card'>
+    <div className='page-container' style={{ display: 'flex', gap: '2rem' }}>
+      {/* ---------------- PROFILE CARD ---------------- */}
+      <div className='profile-card' style={{ flex: 1 }}>
         <h2>Profile</h2>
         {successMessage && <p className='success-message'>{successMessage}</p>}
         {errorMessage && <p className='error-message'>{errorMessage}</p>}
+
         {userData ? (
           <>
             <h4>General Information</h4>
@@ -52,7 +95,7 @@ const ProfileSettings: React.FC = () => {
               <strong>Username:</strong> {userData.username}
             </p>
 
-            {/* ---- Biography Section ---- */}
+            {/* Biography Section */}
             {!editBioMode && (
               <p>
                 <strong>Biography:</strong> {userData.biography || 'No biography yet.'}
@@ -98,7 +141,7 @@ const ProfileSettings: React.FC = () => {
               {userData.dateJoined ? new Date(userData.dateJoined).toLocaleDateString() : 'N/A'}
             </p>
 
-            {/* ---- Reset Password Section ---- */}
+            {/* Reset Password Section */}
             {canEditProfile && (
               <>
                 <h4>Reset Password</h4>
@@ -125,7 +168,7 @@ const ProfileSettings: React.FC = () => {
               </>
             )}
 
-            {/* ---- Danger Zone (Delete User) ---- */}
+            {/* Danger Zone */}
             {canEditProfile && (
               <>
                 <h4>Danger Zone</h4>
@@ -139,7 +182,7 @@ const ProfileSettings: React.FC = () => {
           <p>No user data found. Make sure the username parameter is correct.</p>
         )}
 
-        {/* ---- Confirmation Modal for Delete ---- */}
+        {/* Confirmation Modal */}
         {showConfirmation && (
           <div className='modal'>
             <div className='modal-content'>
@@ -155,6 +198,34 @@ const ProfileSettings: React.FC = () => {
               </button>
             </div>
           </div>
+        )}
+      </div>
+
+      {/* ---------------- LEADERBOARD CARD ---------------- */}
+      <div className='profile-card leaderboard-container'>
+        <h2>Leaderboard</h2>
+        {leaderboard.length > 0 ? (
+          <ol className='leaderboard-list'>
+            {leaderboard.map(user => (
+              <li key={user._id || user.username} className='leaderboard-item'>
+                <span
+                  className='leaderboard-username'
+                  style={{ fontWeight: 'normal' }} // override bold if needed
+                >
+                  {user.username}
+                </span>
+                <span className='leaderboard-points'>{user.points} pts</span>
+              </li>
+            ))}
+          </ol>
+        ) : (
+          <p>No leaderboard data.</p>
+        )}
+
+        {userRank !== null && (
+          <p className='rank-info'>
+            Your overall rank: <strong>{userRank}</strong>
+          </p>
         )}
       </div>
     </div>

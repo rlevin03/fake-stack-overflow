@@ -14,6 +14,9 @@ import {
   loginUser,
   saveUser,
   updateUser,
+  // 1) IMPORT the new leaderboard service functions:
+  getTop10ByPoints,
+  getRankForUser,
 } from '../services/user.service';
 
 const userController = (socket: FakeSOSocket) => {
@@ -21,8 +24,6 @@ const userController = (socket: FakeSOSocket) => {
 
   /**
    * Validates that the request body contains all required fields for a user.
-   * @param req The incoming request containing user data.
-   * @returns `true` if the body contains valid user fields; otherwise, `false`.
    */
   const isUserBodyValid = (req: UserRequest): boolean =>
     req.body !== undefined &&
@@ -33,8 +34,6 @@ const userController = (socket: FakeSOSocket) => {
 
   /**
    * Validates that the request body contains all required fields to update a biography.
-   * @param req The incoming request containing user data.
-   * @returns `true` if the body contains valid user fields; otherwise, `false`.
    */
   const isUpdateBiographyBodyValid = (req: UpdateBiographyRequest): boolean =>
     req.body !== undefined &&
@@ -44,9 +43,6 @@ const userController = (socket: FakeSOSocket) => {
 
   /**
    * Handles the creation of a new user account.
-   * @param req The request containing username, email, and password in the body.
-   * @param res The response, either returning the created user or an error.
-   * @returns A promise resolving to void.
    */
   const createUser = async (req: UserRequest, res: Response): Promise<void> => {
     if (!isUserBodyValid(req)) {
@@ -55,7 +51,6 @@ const userController = (socket: FakeSOSocket) => {
     }
 
     const requestUser = req.body;
-
     const user: User = {
       ...requestUser,
       dateJoined: new Date(),
@@ -64,7 +59,6 @@ const userController = (socket: FakeSOSocket) => {
 
     try {
       const result = await saveUser(user);
-
       if ('error' in result) {
         throw new Error(result.error);
       }
@@ -81,9 +75,6 @@ const userController = (socket: FakeSOSocket) => {
 
   /**
    * Handles user login by validating credentials.
-   * @param req The request containing username and password in the body.
-   * @param res The response, either returning the user or an error.
-   * @returns A promise resolving to void.
    */
   const userLogin = async (req: UserRequest, res: Response): Promise<void> => {
     try {
@@ -98,7 +89,6 @@ const userController = (socket: FakeSOSocket) => {
       };
 
       const user = await loginUser(loginCredentials);
-
       if ('error' in user) {
         throw Error(user.error);
       }
@@ -111,20 +101,15 @@ const userController = (socket: FakeSOSocket) => {
 
   /**
    * Retrieves a user by their username.
-   * @param req The request containing the username as a route parameter.
-   * @param res The response, either returning the user or an error.
-   * @returns A promise resolving to void.
    */
   const getUser = async (req: UserByUsernameRequest, res: Response): Promise<void> => {
     try {
       const { username } = req.params;
-
       const user = await getUserByUsername(username);
 
       if ('error' in user) {
         throw Error(user.error);
       }
-
       res.status(200).json(user);
     } catch (error) {
       res.status(500).send(`Error when getting user by username: ${error}`);
@@ -133,17 +118,13 @@ const userController = (socket: FakeSOSocket) => {
 
   /**
    * Retrieves all users from the database.
-   * @param res The response, either returning the users or an error.
-   * @returns A promise resolving to void.
    */
   const getUsers = async (_: Request, res: Response): Promise<void> => {
     try {
       const users = await getUsersList();
-
       if ('error' in users) {
         throw Error(users.error);
       }
-
       res.status(200).json(users);
     } catch (error) {
       res.status(500).send(`Error when getting users: ${error}`);
@@ -152,14 +133,10 @@ const userController = (socket: FakeSOSocket) => {
 
   /**
    * Deletes a user by their username.
-   * @param req The request containing the username as a route parameter.
-   * @param res The response, either confirming deletion or returning an error.
-   * @returns A promise resolving to void.
    */
   const deleteUser = async (req: UserByUsernameRequest, res: Response): Promise<void> => {
     try {
       const { username } = req.params;
-
       const deletedUser = await deleteUserByUsername(username);
 
       if ('error' in deletedUser) {
@@ -178,9 +155,6 @@ const userController = (socket: FakeSOSocket) => {
 
   /**
    * Resets a user's password.
-   * @param req The request containing the username and new password in the body.
-   * @param res The response, either confirming the update or returning an error.
-   * @returns A promise resolving to void.
    */
   const resetPassword = async (req: UserRequest, res: Response): Promise<void> => {
     try {
@@ -190,7 +164,6 @@ const userController = (socket: FakeSOSocket) => {
       }
 
       const updatedUser = await updateUser(req.body.username, { password: req.body.password });
-
       if ('error' in updatedUser) {
         throw Error(updatedUser.error);
       }
@@ -203,9 +176,6 @@ const userController = (socket: FakeSOSocket) => {
 
   /**
    * Updates a user's biography.
-   * @param req The request containing the username and biography in the body.
-   * @param res The response, either confirming the update or returning an error.
-   * @returns A promise resolving to void.
    */
   const updateBiography = async (req: UpdateBiographyRequest, res: Response): Promise<void> => {
     try {
@@ -214,12 +184,8 @@ const userController = (socket: FakeSOSocket) => {
         return;
       }
 
-      // Validate that request has username and biography
       const { username, biography } = req.body;
-
-      // Call the same updateUser(...) service used by resetPassword
       const updatedUser = await updateUser(username, { biography });
-
       if ('error' in updatedUser) {
         throw new Error(updatedUser.error);
       }
@@ -236,7 +202,50 @@ const userController = (socket: FakeSOSocket) => {
     }
   };
 
-  // Define routes for the user-related operations.
+  // ---------------------------------------
+  //    NEW: Leaderboard Endpoints
+  // ---------------------------------------
+
+  /**
+   * GET /api/users/top10
+   * Returns top 10 users by points (descending).
+   */
+  const getTop10 = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const top10 = await getTop10ByPoints();
+      if ('error' in top10) {
+        throw new Error(top10.error);
+      }
+      res.status(200).json(top10);
+    } catch (error) {
+      res.status(500).send(`Error when getting top 10: ${error}`);
+    }
+  };
+
+  /**
+   * GET /api/users/leaderboard/user-rank?username=someUser
+   * Returns { rank: number } for that username.
+   */
+  const getUserRankHandler = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const { username } = req.query;
+      if (!username || typeof username !== 'string') {
+        res.status(400).send('Invalid or missing username query param');
+        return;
+      }
+
+      const rankResult = await getRankForUser(username);
+      if ('error' in rankResult) {
+        throw new Error(rankResult.error);
+      }
+      // rankResult should be { rank: number } here
+      res.status(200).json(rankResult);
+    } catch (error) {
+      res.status(500).send(`Error when getting user rank: ${error}`);
+    }
+  };
+
+  // ---------------- REGISTER ALL ROUTES ----------------
   router.post('/signup', createUser);
   router.post('/login', userLogin);
   router.patch('/resetPassword', resetPassword);
@@ -244,6 +253,11 @@ const userController = (socket: FakeSOSocket) => {
   router.get('/getUsers', getUsers);
   router.delete('/deleteUser/:username', deleteUser);
   router.patch('/updateBiography', updateBiography);
+
+  // Add the new leaderboard routes:
+  router.get('/top10', getTop10);
+  router.get('/leaderboard/user-rank', getUserRankHandler);
+
   return router;
 };
 
