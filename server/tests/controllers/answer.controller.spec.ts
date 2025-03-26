@@ -19,6 +19,8 @@ describe('POST /addAnswer', () => {
         text: 'This is a test answer',
         ansBy: 'dummyUserId',
         ansDateTime: new Date('2024-06-03'),
+        downVotes: [],
+        upVotes: [],
       },
     };
 
@@ -28,6 +30,8 @@ describe('POST /addAnswer', () => {
       ansBy: 'dummyUserId',
       ansDateTime: new Date('2024-06-03'),
       comments: [],
+      upVotes: [],
+      downVotes: [],
     };
     saveAnswerSpy.mockResolvedValueOnce(mockAnswer);
 
@@ -68,6 +72,8 @@ describe('POST /addAnswer', () => {
       ansBy: 'dummyUserId',
       ansDateTime: mockAnswer.ansDateTime.toISOString(),
       comments: [],
+      upVotes: [],
+      downVotes: [],
     });
   });
 
@@ -168,6 +174,8 @@ describe('POST /addAnswer', () => {
       ansBy: 'dummyUserId',
       ansDateTime: new Date('2024-06-03'),
       comments: [],
+      upVotes: [],
+      downVotes: [],
     };
 
     saveAnswerSpy.mockResolvedValueOnce(mockAnswer);
@@ -195,6 +203,8 @@ describe('POST /addAnswer', () => {
       ansBy: 'dummyUserId',
       ansDateTime: new Date('2024-06-03'),
       comments: [],
+      upVotes: [],
+      downVotes: [],
     };
 
     const mockQuestion = {
