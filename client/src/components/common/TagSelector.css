@@ -1,9 +1,7 @@
-/* Container for the tag selector */
 .tag-selector {
     margin: 10px 0;
   }
   
-  /* Style for the filter input */
   .tag-filter-input {
     width: 100%;
     padding: 8px;
@@ -13,9 +11,8 @@
     border-radius: 4px;
   }
   
-  /* Container for the list of tag buttons */
   .tag-list {
-    max-height: 200px; /* adjust height as needed */
+    max-height: 200px; /* adjust as needed */
     overflow-y: scroll;
     border: 1px solid #ccc;
     padding: 5px;
@@ -23,7 +20,6 @@
     background-color: #f9f9f9;
   }
   
-  /* Default style for tag buttons (grey background) */
   .tag-button {
     margin: 4px;
     padding: 6px 10px;
@@ -34,16 +30,8 @@
     cursor: pointer;
   }
   
-  /* Selected tag button style (blue background) */
   .tag-button-selected {
     background-color: #007bff;
     color: white;
-  }
-  
-  /* Optional: Style for the tag selector label */
-  .tag-selector-label {
-    font-weight: bold;
-    margin-bottom: 5px;
-    display: block;
   }
   

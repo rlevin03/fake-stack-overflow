@@ -1,13 +1,12 @@
 import React from 'react';
 import './index.css';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import useAuth from '../../../hooks/useAuth';
 
-/**
- * Renders a signup form with username, password, and password confirmation inputs,
- * password visibility toggle, error handling, and a link to the login page.
- */
 const Signup = () => {
+  const navigate = useNavigate();
+
+  // Pass 'signup' and a callback to navigate to '/select-interests' on success
   const {
     username,
     password,
@@ -17,7 +16,9 @@ const Signup = () => {
     handleSubmit,
     handleInputChange,
     togglePasswordVisibility,
-  } = useAuth('signup');
+  } = useAuth('signup', () => {
+    navigate('/select-interests');
+  });
 
   return (
     <div className='container'>

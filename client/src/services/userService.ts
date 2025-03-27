@@ -142,6 +142,23 @@ const getRecommendations = async (
   return res.data;
 };
 
+/**
+ * Updates the user's preferences.
+ * @param userId - The ID of the user.
+ * @param updates - An array of { index, value } updates.
+ * @returns The updated user.
+ */
+const updatePreferences = async (
+  userId: string,
+  updates: { index: number; value: number }[],
+): Promise<SafeDatabaseUser> => {
+  const res = await api.patch(`${USER_API_URL}/updatePreferences`, { userId, updates });
+  if (res.status !== 200) {
+    throw new Error('Error when updating preferences');
+  }
+  return res.data;
+};
+
 export {
   getUsers,
   getUserByUsername,
@@ -151,4 +168,5 @@ export {
   resetPassword,
   updateBiography,
   getRecommendations,
+  updatePreferences,
 };
