@@ -41,6 +41,8 @@ export const ans1: DatabaseAnswer = {
   ansBy: 'ansBy1',
   ansDateTime: new Date('2023-11-18T09:24:00'),
   comments: [],
+  upVotes: [],
+  downVotes: [],
 };
 
 export const ans2: DatabaseAnswer = {
@@ -49,6 +51,8 @@ export const ans2: DatabaseAnswer = {
   ansBy: 'ansBy2',
   ansDateTime: new Date('2023-11-20T09:24:00'),
   comments: [],
+  upVotes: [],
+  downVotes: [],
 };
 
 export const ans3: DatabaseAnswer = {
@@ -57,6 +61,8 @@ export const ans3: DatabaseAnswer = {
   ansBy: 'ansBy3',
   ansDateTime: new Date('2023-11-19T09:24:00'),
   comments: [],
+  upVotes: [],
+  downVotes: [],
 };
 
 export const ans4: DatabaseAnswer = {
@@ -65,6 +71,8 @@ export const ans4: DatabaseAnswer = {
   ansBy: 'ansBy4',
   ansDateTime: new Date('2023-11-19T09:24:00'),
   comments: [],
+  upVotes: [],
+  downVotes: [],
 };
 
 export const QUESTIONS: DatabaseQuestion[] = [

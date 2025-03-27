@@ -5,9 +5,9 @@ import {
   FindQuestionRequest,
   FindQuestionByIdRequest,
   AddQuestionRequest,
-  VoteRequest,
   FakeSOSocket,
   PopulatedDatabaseQuestion,
+  QuestionVoteRequest,
 } from '../types/types';
 import {
   addVoteToQuestion,
@@ -178,7 +178,7 @@ const questionController = (socket: FakeSOSocket) => {
    * @returns A Promise that resolves to void.
    */
   const voteQuestion = async (
-    req: VoteRequest,
+    req: QuestionVoteRequest,
     res: Response,
     type: 'upvote' | 'downvote',
   ): Promise<void> => {
@@ -219,7 +219,7 @@ const questionController = (socket: FakeSOSocket) => {
    *
    * @returns A Promise that resolves to void.
    */
-  const upvoteQuestion = async (req: VoteRequest, res: Response): Promise<void> => {
+  const upvoteQuestion = async (req: QuestionVoteRequest, res: Response): Promise<void> => {
     voteQuestion(req, res, 'upvote');
   };
 
@@ -232,7 +232,7 @@ const questionController = (socket: FakeSOSocket) => {
    *
    * @returns A Promise that resolves to void.
    */
-  const downvoteQuestion = async (req: VoteRequest, res: Response): Promise<void> => {
+  const downvoteQuestion = async (req: QuestionVoteRequest, res: Response): Promise<void> => {
     voteQuestion(req, res, 'downvote');
   };
 

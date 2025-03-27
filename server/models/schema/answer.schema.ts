@@ -20,6 +20,8 @@ const answerSchema: Schema = new Schema(
     ansDateTime: {
       type: Date,
     },
+    upVotes: [{ type: String }],
+    downVotes: [{ type: String }],
     comments: [{ type: Schema.Types.ObjectId, ref: 'Comment' }],
   },
   { collection: 'Answer' },

@@ -9,7 +9,7 @@ import {
   PopulatedDatabaseQuestion,
   Question,
   QuestionResponse,
-  VoteResponse,
+  QuestionVoteResponse,
 } from '../types/types';
 import AnswerModel from '../models/answers.model';
 import QuestionModel from '../models/questions.model';
@@ -23,6 +23,7 @@ import {
   sortQuestionsByNewest,
   sortQuestionsByUnanswered,
 } from '../utils/sort.util';
+import UserModel from '../models/users.model';
 
 /**
  * Checks if keywords exist in a question's title or text.
@@ -158,6 +159,10 @@ export const fetchAndIncrementQuestionViewsById = async (
 export const saveQuestion = async (question: Question): Promise<QuestionResponse> => {
   try {
     const result: DatabaseQuestion = await QuestionModel.create(question);
+    await UserModel.updateOne(
+      { username: question.askedBy },
+      { $push: { questionsAsked: result._id }, $inc: { points: 10 } },
+    );
 
     return result;
   } catch (error) {
@@ -170,13 +175,13 @@ export const saveQuestion = async (question: Question): Promise<QuestionResponse
  * @param {string} qid - The question ID
  * @param {string} username - The username who voted
  * @param {'upvote' | 'downvote'} voteType - The vote type
- * @returns {Promise<VoteResponse>} - The updated vote result
+ * @returns {Promise<QuestionVoteResponse>} - The updated vote result
  */
 export const addVoteToQuestion = async (
   qid: string,
   username: string,
   voteType: 'upvote' | 'downvote',
-): Promise<VoteResponse> => {
+): Promise<QuestionVoteResponse> => {
   let updateOperation: QueryOptions;
 
   if (voteType === 'upvote') {
@@ -228,6 +233,14 @@ export const addVoteToQuestion = async (
       { _id: qid },
       updateOperation,
       { new: true },
+    );
+
+    await UserModel.updateOne(
+      { username },
+      {
+        $push: { [voteType === 'upvote' ? 'questionsUpvoted' : 'questionsDownvoted']: qid },
+        $inc: { points: 1 },
+      },
     );
 
     if (!result) {
