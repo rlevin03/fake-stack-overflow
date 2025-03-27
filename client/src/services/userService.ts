@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { UserCredentials, SafeDatabaseUser } from '../types/types';
+import { UserCredentials, SafeDatabaseUser, DatabaseQuestion } from '../types/types';
 import api from './config';
 
 const USER_API_URL = `${process.env.REACT_APP_SERVER_URL}/user`;
@@ -123,6 +123,25 @@ const updateBiography = async (
   return res.data;
 };
 
+/**
+ * Retrieves personalized question recommendations for a user.
+ * This function calls the backend endpoint GET /getRecommendations/:userId,
+ * which returns an array of objects containing a question and its similarity score.
+ *
+ * @param userId - The unique id of the user.
+ * @returns A promise that resolves to an array of recommended questions along with similarity scores.
+ * @throws Error if there is an issue fetching recommendations.
+ */
+const getRecommendations = async (
+  userId: string,
+): Promise<{ question: DatabaseQuestion; similarity: number }[]> => {
+  const res = await api.get(`${USER_API_URL}/getRecommendations/${userId}`);
+  if (res.status !== 200) {
+    throw new Error('Error when fetching recommendations');
+  }
+  return res.data;
+};
+
 export {
   getUsers,
   getUserByUsername,
@@ -131,4 +150,5 @@ export {
   deleteUser,
   resetPassword,
   updateBiography,
+  getRecommendations,
 };

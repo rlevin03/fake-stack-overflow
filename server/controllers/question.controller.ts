@@ -92,6 +92,23 @@ const questionController = (socket: FakeSOSocket) => {
         throw new Error('Error while fetching question by id');
       }
 
+      // Update user preferences based on the question's tags for a view.
+      // A lower impact is applied for views (e.g. 0.2) compared to votes or asking.
+      const viewImpact = 0.1;
+      const updates = q.tags
+        .map(tag => {
+          const tagName = tag.name as keyof typeof tagIndexMap;
+          const index = tagIndexMap[tagName];
+          return index !== undefined ? { index, value: viewImpact } : null;
+        })
+        .filter((update): update is { index: number; value: number } => update !== null);
+
+      // Retrieve the user record for the viewer
+      const userRecord = await UserModel.findOne({ username });
+      if (userRecord) {
+        await updateUserPreferences(userRecord._id.toString(), updates);
+      }
+
       socket.emit('viewsUpdate', q);
       res.json(q);
     } catch (err: unknown) {

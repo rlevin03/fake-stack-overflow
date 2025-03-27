@@ -5,14 +5,20 @@ import TagModel from '../models/tags.model';
 import UserModel from '../models/users.model';
 
 import {
+  DatabaseComment,
   DatabaseQuestion,
+  DatabaseTag,
   DatabaseUser,
+  PopulatedDatabaseAnswer,
+  PopulatedDatabaseQuestion,
   SafeDatabaseUser,
   User,
   UserCredentials,
   UserResponse,
   UsersResponse,
 } from '../types/types';
+import AnswerModel from '../models/answers.model';
+import CommentModel from '../models/comments.model';
 
 /**
  * Saves a new user to the database.
@@ -200,7 +206,7 @@ export const updateUserPreferences = async (
  */
 export const getUserRecommendations = async (
   userId: string,
-): Promise<{ question: DatabaseQuestion; similarity: number }[] | { error: string }> => {
+): Promise<{ question: PopulatedDatabaseQuestion; similarity: number }[] | { error: string }> => {
   try {
     const user = await UserModel.findById(userId);
     if (!user) {
@@ -208,23 +214,30 @@ export const getUserRecommendations = async (
     }
 
     // Retrieve all questions and populate the tags so that we get the full Tag objects.
-    const questions = await QuestionModel.find();
+    // New: retrieve questions with tags fully populated
+    const questions = await QuestionModel.find()
+      .populate<{ tags: DatabaseTag[] }>('tags')
+      .populate<{ answers: PopulatedDatabaseAnswer[] }>({
+        path: 'answers',
+        model: AnswerModel,
+        populate: { path: 'comments', model: CommentModel },
+      })
+      .populate<{ comments: DatabaseComment[] }>({
+        path: 'comments',
+        model: CommentModel,
+      })
+      .exec();
 
     // Convert an array of Tag objects into a 1000-dimensional binary vector.
     // We assume each populated tag has a 'name' property.
-    const tagsToVector = async (tagIds: Types.ObjectId[]): Promise<number[]> => {
+    const tagsToVector = (tags: DatabaseTag[]): number[] => {
       const vector = new Array(1000).fill(0);
-
-      const tags = await TagModel.find({ _id: { $in: tagIds } });
-
       for (const tag of tags) {
-        const tagName = tag.name;
-        const index = (tagIndexMap as Record<string, number>)[tagName];
+        const index = (tagIndexMap as Record<string, number>)[tag.name];
         if (index !== undefined) {
           vector[index] = 1;
         }
       }
-
       return vector;
     };
 

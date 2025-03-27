@@ -10,8 +10,9 @@ import { Comment, DatabaseComment } from './comment';
  * - `unanswered`: Sort by questions with no answers.
  * - `active`: Sort by questions with recent activity (views, answers, votes).
  * - `mostViewed`: Sort by the most viewed questions.
+ * - `relevance`: Sort by relevance to user preferences.
  */
-export type OrderType = 'newest' | 'unanswered' | 'active' | 'mostViewed';
+export type OrderType = 'newest' | 'unanswered' | 'active' | 'mostViewed' | 'relevance';
 
 /**
  * Represents a question.
