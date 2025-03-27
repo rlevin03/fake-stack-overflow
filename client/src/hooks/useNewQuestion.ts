@@ -66,14 +66,6 @@ const useNewQuestion = () => {
       setTagErr('');
     }
 
-    for (const tagName of tagNames) {
-      if (tagName.length > 20) {
-        setTagErr('New tag length cannot be more than 20');
-        isValid = false;
-        break;
-      }
-    }
-
     return isValid;
   };
 
