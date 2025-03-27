@@ -1,5 +1,5 @@
 import { Types } from 'mongoose';
-import tagIndexMap from './tagIndexMap.json'; // Adjust path as needed
+import tagIndexMap from '@fake-stack-overflow/shared/tagIndexMap.json'; // Adjust path as needed
 import QuestionModel from '../models/questions.model';
 import TagModel from '../models/tags.model';
 import UserModel from '../models/users.model';
