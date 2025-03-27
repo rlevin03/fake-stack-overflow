@@ -85,7 +85,7 @@ const userSchema: Schema = new Schema(
     },
     preferences: {
       type: [Number],
-      default: [],
+      default: () => Array(1000).fill(0),
     },
   },
   { collection: 'User' },

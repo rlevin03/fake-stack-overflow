@@ -1,3 +1,4 @@
+import tagIndexMap from '@fake-stack-overflow/shared/tagIndexMap.json';
 import { downvoteQuestion, upvoteQuestion } from '../../../services/questionService';
 import './index.css';
 import useUserContext from '../../../hooks/useUserContext';

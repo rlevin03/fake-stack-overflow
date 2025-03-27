@@ -10,7 +10,7 @@ import { Question } from '../types/types';
  *
  * @returns title - The current value of the title input.
  * @returns text - The current value of the text input.
- * @returns tagNames - The current value of the tags input.
+ * @returns tagNames - The current array of selected tag names.
  * @returns titleErr - Error message for the title field, if any.
  * @returns textErr - Error message for the text field, if any.
  * @returns tagErr - Error message for the tag field, if any.
@@ -21,14 +21,15 @@ const useNewQuestion = () => {
   const { user } = useUserContext();
   const [title, setTitle] = useState<string>('');
   const [text, setText] = useState<string>('');
-  const [tagNames, setTagNames] = useState<string>('');
+  // Initialize tagNames as an array of strings
+  const [tagNames, setTagNames] = useState<string[]>([]);
 
   const [titleErr, setTitleErr] = useState<string>('');
   const [textErr, setTextErr] = useState<string>('');
   const [tagErr, setTagErr] = useState<string>('');
 
   /**
-   * Function to validate the form before submitting the question.
+   * Validates the form before submitting the question.
    *
    * @returns boolean - True if the form is valid, false otherwise.
    */
@@ -55,18 +56,17 @@ const useNewQuestion = () => {
       setTextErr('');
     }
 
-    const tagnames = tagNames.split(' ').filter(tagName => tagName.trim() !== '');
-    if (tagnames.length === 0) {
+    if (tagNames.length === 0) {
       setTagErr('Should have at least 1 tag');
       isValid = false;
-    } else if (tagnames.length > 5) {
+    } else if (tagNames.length > 5) {
       setTagErr('Cannot have more than 5 tags');
       isValid = false;
     } else {
       setTagErr('');
     }
 
-    for (const tagName of tagnames) {
+    for (const tagName of tagNames) {
       if (tagName.length > 20) {
         setTagErr('New tag length cannot be more than 20');
         isValid = false;
@@ -79,14 +79,12 @@ const useNewQuestion = () => {
 
   /**
    * Function to post a question to the server.
-   *
-   * @returns title - The current value of the title input.
    */
   const postQuestion = async () => {
     if (!validateForm()) return;
 
-    const tagnames = tagNames.split(' ').filter(tagName => tagName.trim() !== '');
-    const tags = tagnames.map(tagName => ({
+    // Map the array of tag names to tag objects.
+    const tags = tagNames.map(tagName => ({
       name: tagName,
       description: 'user added tag',
     }));

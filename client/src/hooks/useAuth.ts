@@ -19,7 +19,7 @@ import { createUser, loginUser } from '../services/userService';
  *   - handleSubmit: Function to handle form submission.
  *   - togglePasswordVisibility: Function to toggle password visibility.
  */
-const useAuth = (authType: 'login' | 'signup') => {
+const useAuth = (authType: 'login' | 'signup', onSuccess?: () => void) => {
   const [username, setUsername] = useState<string>('');
   const [password, setPassword] = useState<string>('');
   const [passwordConfirmation, setPasswordConfirmation] = useState<string>('');
@@ -101,7 +101,11 @@ const useAuth = (authType: 'login' | 'signup') => {
       }
 
       setUser(user);
-      navigate('/home');
+      if (authType === 'signup' && onSuccess) {
+        onSuccess();
+      } else {
+        navigate('/home');
+      }
     } catch (error) {
       setErr((error as Error).message);
     }

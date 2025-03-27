@@ -1,4 +1,5 @@
 import express, { Request, Response, Router } from 'express';
+import tagIndexMap from '@fake-stack-overflow/shared/tagIndexMap.json'; // Import the predefined tag map
 import { getTagCountMap } from '../services/tag.service';
 import TagModel from '../models/tags.model';
 import { DatabaseTag } from '../types/types';
@@ -8,12 +9,6 @@ const tagController = () => {
 
   /**
    * Retrieves a list of tags along with the number of questions associated with each tag.
-   * If there is an error, the HTTP response's status is updated.
-   *
-   * @param _ The HTTP request object (not used in this function).
-   * @param res The HTTP response object used to send back the tag count mapping.
-   *
-   * @returns A Promise that resolves to void.
    */
   const getTagsWithQuestionNumber = async (_: Request, res: Response): Promise<void> => {
     try {
@@ -35,33 +30,40 @@ const tagController = () => {
   };
 
   /**
-   * Retrieves a tag from the database by its name, provided in the request parameters.
-   * If the tag is not found or an error occurs, the appropriate HTTP response status and message are returned.
-   *
-   * @param req The Request object containing the tag name in the URL parameters.
-   * @param res The HTTP response object used to send back the result of the operation.
-   *
-   * @returns A Promise that resolves to void.
+   * Retrieves a tag from the database by its name.
    */
   const getTagByName = async (req: Request, res: Response): Promise<void> => {
     try {
-      const { name } = req.params; // Get the tag name from the request parameters
-      const tag: DatabaseTag | null = await TagModel.findOne({ name }); // Use the model's method to find the tag
-
+      const { name } = req.params;
+      const tag: DatabaseTag | null = await TagModel.findOne({ name });
       if (!tag) {
         res.status(404).send(`Tag with name "${name}" not found`);
         return;
       }
-
-      res.json(tag); // Return the tag as JSON
+      res.json(tag);
     } catch (err) {
       res.status(500).send(`Error when fetching tag: ${(err as Error).message}`);
     }
   };
 
-  // Add appropriate HTTP verbs and their endpoints to the router.
+  /**
+   * Retrieves the predefined list of 1000 tags from the shared tag index.
+   */
+  const getPredefinedTags = async (_: Request, res: Response): Promise<void> => {
+    try {
+      const tags = Object.keys(tagIndexMap).map(tagName => ({
+        name: tagName,
+        qcnt: 0, // default value; you can update this if needed
+      }));
+      res.json(tags);
+    } catch (err) {
+      res.status(500).send(`Error when fetching predefined tags: ${(err as Error).message}`);
+    }
+  };
+
   router.get('/getTagsWithQuestionNumber', getTagsWithQuestionNumber);
-  router.get('/getTagByName/:name', getTagByName); // New endpoint to get tag by name
+  router.get('/getTagByName/:name', getTagByName);
+  router.get('/getPredefinedTags', getPredefinedTags); // New endpoint
 
   return router;
 };

@@ -1,0 +1,47 @@
+.interests-container {
+    padding: 20px;
+  }
+  
+  .interests-filter-input {
+    width: 100%;
+    padding: 8px;
+    margin-bottom: 10px;
+    box-sizing: border-box;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+  }
+  
+  .interests-tag-list {
+    max-height: 300px; /* Adjust height as needed */
+    overflow-y: scroll;
+    border: 1px solid #ccc;
+    padding: 10px;
+    border-radius: 4px;
+    background-color: #f9f9f9;
+  }
+  
+  .interests-tag-button {
+    margin: 4px;
+    padding: 6px 10px;
+    border: none;
+    border-radius: 4px;
+    background-color: #ddd;
+    color: #333;
+    cursor: pointer;
+  }
+  
+  .interests-tag-button.selected {
+    background-color: #007bff;
+    color: white;
+  }
+  
+  .submit-interests-button {
+    margin-top: 20px;
+    padding: 10px 20px;
+    cursor: pointer;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    border-radius: 4px;
+  }
+  

@@ -1,19 +1,24 @@
 import { useSearchParams } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import useUserContext from './useUserContext';
-import { AnswerUpdatePayload, OrderType, PopulatedDatabaseQuestion } from '../types/types';
+import {
+  AnswerUpdatePayload,
+  DatabaseQuestion,
+  OrderType,
+  PopulatedDatabaseQuestion,
+} from '../types/types';
 import { getQuestionsByFilter } from '../services/questionService';
+import { getRecommendations } from '../services/userService';
 
 /**
- * Custom hook for managing the question page state, filtering, and real-time updates.
+ * Custom hook for managing the,  question page state, filtering, and real-time updates.
  *
  * @returns titleText - The current title of the question page
  * @returns qlist - The list of questions to display
  * @returns setQuestionOrder - Function to set the sorting order of questions (e.g., newest, oldest).
  */
 const useQuestionPage = () => {
-  const { socket } = useUserContext();
-
+  const { socket, user } = useUserContext();
   const [searchParams] = useSearchParams();
   const [titleText, setTitleText] = useState<string>('All Questions');
   const [search, setSearch] = useState<string>('');
@@ -40,16 +45,26 @@ const useQuestionPage = () => {
   }, [searchParams]);
 
   useEffect(() => {
-    /**
-     * Function to fetch questions based on the filter and update the question list.
-     */
     const fetchData = async () => {
       try {
-        const res = await getQuestionsByFilter(questionOrder, search);
-        setQlist(res || []);
+        if (questionOrder === 'relevance') {
+          // When sorting by relevance, call the recommendations endpoint.
+          // getRecommendations returns an array of objects with { question, similarity }.
+          if (user && user._id) {
+            const recommendations = await getRecommendations(user._id.toString());
+            const recommendedQuestions = recommendations.map(
+              (rec: { question: DatabaseQuestion; similarity: number }) =>
+                rec.question as unknown as PopulatedDatabaseQuestion,
+            );
+            setQlist(recommendedQuestions);
+          }
+        } else {
+          // Otherwise, use the standard filtering endpoint.
+          const res = await getQuestionsByFilter(questionOrder, search);
+          setQlist(res || []);
+        }
       } catch (error) {
-        // eslint-disable-next-line no-console
-        console.log(error);
+        console.error(error);
       }
     };
 

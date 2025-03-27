@@ -17,21 +17,24 @@ import UsersListPage from './main/usersListPage';
 import ProfileSettings from './profileSettings';
 import AllGamesPage from './main/games/allGamesPage';
 import GamePage from './main/games/gamePage';
+import InterestsSelection from './interestsSelection';
 
 const ProtectedRoute = ({
   user,
   socket,
+  setUser,
   children,
 }: {
   user: SafeDatabaseUser | null;
   socket: FakeSOSocket | null;
+  setUser: (user: SafeDatabaseUser | null) => void;
   children: JSX.Element;
 }) => {
   if (!user || !socket) {
     return <Navigate to='/' />;
   }
 
-  return <UserContext.Provider value={{ user, socket }}>{children}</UserContext.Provider>;
+  return <UserContext.Provider value={{ user, socket, setUser }}>{children}</UserContext.Provider>;
 };
 
 /**
@@ -51,7 +54,7 @@ const FakeStackOverflow = ({ socket }: { socket: FakeSOSocket | null }) => {
         {
           <Route
             element={
-              <ProtectedRoute user={user} socket={socket}>
+              <ProtectedRoute user={user} socket={socket} setUser={setUser}>
                 <Layout />
               </ProtectedRoute>
             }>
@@ -66,6 +69,7 @@ const FakeStackOverflow = ({ socket }: { socket: FakeSOSocket | null }) => {
             <Route path='/user/:username' element={<ProfileSettings />} />
             <Route path='/games' element={<AllGamesPage />} />
             <Route path='/games/:gameID' element={<GamePage />} />
+            <Route path='/select-interests' element={<InterestsSelection />} />
           </Route>
         }
       </Routes>

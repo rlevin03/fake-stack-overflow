@@ -1,14 +1,19 @@
 import express, { Response } from 'express';
 import { ObjectId } from 'mongodb';
+import tagIndexMap from '@fake-stack-overflow/shared/tagIndexMap.json';
 import {
   Answer,
   AddAnswerRequest,
   FakeSOSocket,
   PopulatedDatabaseAnswer,
   AnswerVoteRequest,
+  Tag,
 } from '../types/types';
 import { addAnswerToQuestion, addVoteToAnswer, saveAnswer } from '../services/answer.service';
 import { populateDocument } from '../utils/database.util';
+import QuestionModel from '../models/questions.model';
+import UserModel from '../models/users.model';
+import { updateUserPreferences } from '../services/user.service';
 
 const answerController = (socket: FakeSOSocket) => {
   const router = express.Router();
@@ -76,6 +81,30 @@ const answerController = (socket: FakeSOSocket) => {
       if (populatedAns && 'error' in populatedAns) {
         throw new Error(populatedAns.error);
       }
+
+      // --- Begin: Update user preferences for answering ---
+      // For each tag in the question, add +1 to the corresponding index.
+      const voteImpact = 1;
+      // Fetch the question to retrieve its tags
+      const question = await QuestionModel.findById(qid).populate<{ tags: Tag[] }>('tags');
+      if (!question) {
+        console.error('Question not found while updating preferences for answer.');
+      } else {
+        const updates = question.tags
+          .map(tag => {
+            const tagName = tag.name as keyof typeof tagIndexMap;
+            const index = tagIndexMap[tagName];
+            return index !== undefined ? { index, value: voteImpact } : null;
+          })
+          .filter((update): update is { index: number; value: number } => update !== null);
+
+        // Fetch the user record of the answerer (ansBy)
+        const userRecord = await UserModel.findOne({ username: ansInfo.ansBy });
+        if (userRecord) {
+          await updateUserPreferences(userRecord._id.toString(), updates);
+        }
+      }
+      // --- End: Update user preferences for answering ---
 
       // Populates the fields of the answer that was added and emits the new object
       socket.emit('answerUpdate', {

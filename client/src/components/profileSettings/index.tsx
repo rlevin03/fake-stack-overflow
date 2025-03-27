@@ -1,6 +1,7 @@
 import React from 'react';
 import './index.css';
 import useProfileSettings from '../../hooks/useProfileSettings';
+import InterestsCard from './InterestsCard';
 
 const ProfileSettings: React.FC = () => {
   const {
@@ -97,6 +98,9 @@ const ProfileSettings: React.FC = () => {
               <strong>Date Joined:</strong>{' '}
               {userData.dateJoined ? new Date(userData.dateJoined).toLocaleDateString() : 'N/A'}
             </p>
+
+            {/* ---- Interests/Preferences Section ---- */}
+            {canEditProfile && <InterestsCard />}
 
             {/* ---- Reset Password Section ---- */}
             {canEditProfile && (
