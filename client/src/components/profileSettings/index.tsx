@@ -145,9 +145,6 @@ const ProfileSettings: React.FC = () => {
             {/* ---- Interests/Preferences Section ---- */}
             {canEditProfile && <InterestsCard />}
 
-            {/* ---- Interests/Preferences Section ---- */}
-            {canEditProfile && <InterestsCard />}
-
             {/* Reset Password Section */}
             {canEditProfile && (
               <>
