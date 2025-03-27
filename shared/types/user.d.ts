@@ -17,10 +17,12 @@ export interface UserCredentials {
  * - `password`: The user's password.
  * - `dateJoined`: The date when the user registered.
  * - `biography`: A short description or bio of the user (optional).
+ * - 'preferneces': The user's preferences for the application (optional).
  */
 export interface User extends UserCredentials {
   dateJoined: Date;
   biography?: string;
+  preferences: number[];
 }
 
 /**

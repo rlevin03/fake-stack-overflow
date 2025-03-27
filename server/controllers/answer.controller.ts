@@ -1,8 +1,19 @@
 import express, { Response } from 'express';
 import { ObjectId } from 'mongodb';
-import { Answer, AddAnswerRequest, FakeSOSocket, PopulatedDatabaseAnswer } from '../types/types';
-import { addAnswerToQuestion, saveAnswer } from '../services/answer.service';
+import tagIndexMap from '@fake-stack-overflow/shared/tagIndexMap.json';
+import {
+  Answer,
+  AddAnswerRequest,
+  FakeSOSocket,
+  PopulatedDatabaseAnswer,
+  AnswerVoteRequest,
+  Tag,
+} from '../types/types';
+import { addAnswerToQuestion, addVoteToAnswer, saveAnswer } from '../services/answer.service';
 import { populateDocument } from '../utils/database.util';
+import QuestionModel from '../models/questions.model';
+import UserModel from '../models/users.model';
+import { updateUserPreferences } from '../services/user.service';
 
 const answerController = (socket: FakeSOSocket) => {
   const router = express.Router();
@@ -71,6 +82,30 @@ const answerController = (socket: FakeSOSocket) => {
         throw new Error(populatedAns.error);
       }
 
+      // --- Begin: Update user preferences for answering ---
+      // For each tag in the question, add +1 to the corresponding index.
+      const voteImpact = 1;
+      // Fetch the question to retrieve its tags
+      const question = await QuestionModel.findById(qid).populate<{ tags: Tag[] }>('tags');
+      if (!question) {
+        console.error('Question not found while updating preferences for answer.');
+      } else {
+        const updates = question.tags
+          .map(tag => {
+            const tagName = tag.name as keyof typeof tagIndexMap;
+            const index = tagIndexMap[tagName];
+            return index !== undefined ? { index, value: voteImpact } : null;
+          })
+          .filter((update): update is { index: number; value: number } => update !== null);
+
+        // Fetch the user record of the answerer (ansBy)
+        const userRecord = await UserModel.findOne({ username: ansInfo.ansBy });
+        if (userRecord) {
+          await updateUserPreferences(userRecord._id.toString(), updates);
+        }
+      }
+      // --- End: Update user preferences for answering ---
+
       // Populates the fields of the answer that was added and emits the new object
       socket.emit('answerUpdate', {
         qid: new ObjectId(qid),
@@ -82,8 +117,82 @@ const answerController = (socket: FakeSOSocket) => {
     }
   };
 
+  /**
+   * Helper function to handle upvoting or downvoting an answer.
+   *
+   * @param req The VoteRequest object containing the answer ID and the username.
+   * @param res The HTTP response object used to send back the result of the operation.
+   * @param type The type of vote to perform (upvote or downvote).
+   *
+   * @returns A Promise that resolves to void.
+   */
+  const voteAnswer = async (
+    req: AnswerVoteRequest,
+    res: Response,
+    type: 'upvote' | 'downvote',
+  ): Promise<void> => {
+    if (!req.body.ansid || !req.body.username) {
+      res.status(400).send('Invalid request');
+      return;
+    }
+
+    const { ansid, username } = req.body;
+
+    try {
+      let status;
+
+      if (type === 'upvote') {
+        status = await addVoteToAnswer(ansid, username, type);
+      } else {
+        status = await addVoteToAnswer(ansid, username, type);
+      }
+
+      if (status && 'error' in status) {
+        throw new Error(status.error);
+      }
+
+      // Emit the updated vote counts to all connected clients
+      socket.emit('voteUpdate', {
+        qid: ansid,
+        upVotes: status.upVotes,
+        downVotes: status.downVotes,
+      });
+      res.json(status);
+    } catch (err) {
+      res.status(500).send(`Error when ${type}ing: ${(err as Error).message}`);
+    }
+  };
+
+  /**
+   * Handles upvoting an answer. The request must contain the answerr ID (ansid) and the username.
+   * If the request is invalid or an error occurs, the appropriate HTTP response status and message are returned.
+   *
+   * @param req The VoteRequest object containing the answer ID and the username.
+   * @param res The HTTP response object used to send back the result of the operation.
+   *
+   * @returns A Promise that resolves to void.
+   */
+  const upvoteAnswer = async (req: AnswerVoteRequest, res: Response): Promise<void> => {
+    voteAnswer(req, res, 'upvote');
+  };
+
+  /**
+   * Handles downvoting an answer. The request must contain the answer ID (ansid) and the username.
+   * If the request is invalid or an error occurs, the appropriate HTTP response status and message are returned.
+   *
+   * @param req The VoteRequest object containing the answer ID and the username.
+   * @param res The HTTP response object used to send back the result of the operation.
+   *
+   * @returns A Promise that resolves to void.
+   */
+  const downvoteAnswer = async (req: AnswerVoteRequest, res: Response): Promise<void> => {
+    voteAnswer(req, res, 'downvote');
+  };
+
   // add appropriate HTTP verbs and their endpoints to the router.
   router.post('/addAnswer', addAnswer);
+  router.post('/upvoteAnswer', upvoteAnswer);
+  router.post('/downvoteAnswer', downvoteAnswer);
 
   return router;
 };

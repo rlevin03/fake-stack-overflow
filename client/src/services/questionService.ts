@@ -1,5 +1,5 @@
 import { ObjectId } from 'mongodb';
-import { PopulatedDatabaseQuestion, Question, VoteInterface } from '../types/types';
+import { PopulatedDatabaseQuestion, Question, QuestionVoteInterface } from '../types/types';
 import api from './config';
 
 const QUESTION_API_URL = `${process.env.REACT_APP_SERVER_URL}/question`;
@@ -63,7 +63,7 @@ const addQuestion = async (q: Question): Promise<PopulatedDatabaseQuestion> => {
  * @param username - The username of the person upvoting the question.
  * @throws Error if there is an issue upvoting the question.
  */
-const upvoteQuestion = async (qid: ObjectId, username: string): Promise<VoteInterface> => {
+const upvoteQuestion = async (qid: ObjectId, username: string): Promise<QuestionVoteInterface> => {
   const data = { qid, username };
   const res = await api.post(`${QUESTION_API_URL}/upvoteQuestion`, data);
   if (res.status !== 200) {
@@ -79,7 +79,10 @@ const upvoteQuestion = async (qid: ObjectId, username: string): Promise<VoteInte
  * @param username - The username of the person downvoting the question.
  * @throws Error if there is an issue downvoting the question.
  */
-const downvoteQuestion = async (qid: ObjectId, username: string): Promise<VoteInterface> => {
+const downvoteQuestion = async (
+  qid: ObjectId,
+  username: string,
+): Promise<QuestionVoteInterface> => {
   const data = { qid, username };
   const res = await api.post(`${QUESTION_API_URL}/downvoteQuestion`, data);
   if (res.status !== 200) {

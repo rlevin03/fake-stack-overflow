@@ -1,13 +1,15 @@
 import express, { Response } from 'express';
 import { ObjectId } from 'mongodb';
+import tagIndexMap from '@fake-stack-overflow/shared/tagIndexMap.json';
 import {
   Question,
   FindQuestionRequest,
   FindQuestionByIdRequest,
   AddQuestionRequest,
-  VoteRequest,
   FakeSOSocket,
   PopulatedDatabaseQuestion,
+  QuestionVoteRequest,
+  Tag,
 } from '../types/types';
 import {
   addVoteToQuestion,
@@ -19,6 +21,9 @@ import {
 } from '../services/question.service';
 import { processTags } from '../services/tag.service';
 import { populateDocument } from '../utils/database.util';
+import { updateUserPreferences } from '../services/user.service';
+import QuestionModel from '../models/questions.model';
+import UserModel from '../models/users.model';
 
 const questionController = (socket: FakeSOSocket) => {
   const router = express.Router();
@@ -85,6 +90,23 @@ const questionController = (socket: FakeSOSocket) => {
 
       if ('error' in q) {
         throw new Error('Error while fetching question by id');
+      }
+
+      // Update user preferences based on the question's tags for a view.
+      // A lower impact is applied for views (e.g. 0.2) compared to votes or asking.
+      const viewImpact = 0.1;
+      const updates = q.tags
+        .map(tag => {
+          const tagName = tag.name as keyof typeof tagIndexMap;
+          const index = tagIndexMap[tagName];
+          return index !== undefined ? { index, value: viewImpact } : null;
+        })
+        .filter((update): update is { index: number; value: number } => update !== null);
+
+      // Retrieve the user record for the viewer
+      const userRecord = await UserModel.findOne({ username });
+      if (userRecord) {
+        await updateUserPreferences(userRecord._id.toString(), updates);
       }
 
       socket.emit('viewsUpdate', q);
@@ -156,6 +178,24 @@ const questionController = (socket: FakeSOSocket) => {
       if ('error' in populatedQuestion) {
         throw new Error(populatedQuestion.error);
       }
+      // Update user preferences based on the question's tags (for asking a question)
+      // For each tag in the question, we add +1 to the corresponding index.
+      const voteImpact = 1; // Increase by 1 for asking a question
+      const updates = (populatedQuestion as PopulatedDatabaseQuestion).tags
+        .map((tag: Tag) => {
+          const tagName = tag.name as keyof typeof tagIndexMap;
+          const index = tagIndexMap[tagName];
+          return index !== undefined ? { index, value: voteImpact } : null;
+        })
+        .filter((update): update is { index: number; value: number } => update !== null);
+
+      // Retrieve the user record based on the askedBy field
+      const userRecord = await UserModel.findOne({
+        username: (populatedQuestion as PopulatedDatabaseQuestion).askedBy,
+      });
+      if (userRecord) {
+        await updateUserPreferences(userRecord._id.toString(), updates);
+      }
 
       socket.emit('questionUpdate', populatedQuestion as PopulatedDatabaseQuestion);
       res.json(populatedQuestion);
@@ -178,7 +218,7 @@ const questionController = (socket: FakeSOSocket) => {
    * @returns A Promise that resolves to void.
    */
   const voteQuestion = async (
-    req: VoteRequest,
+    req: QuestionVoteRequest,
     res: Response,
     type: 'upvote' | 'downvote',
   ): Promise<void> => {
@@ -190,16 +230,32 @@ const questionController = (socket: FakeSOSocket) => {
     const { qid, username } = req.body;
 
     try {
-      let status;
-
-      if (type === 'upvote') {
-        status = await addVoteToQuestion(qid, username, type);
-      } else {
-        status = await addVoteToQuestion(qid, username, type);
-      }
-
+      // Register the vote
+      const status = await addVoteToQuestion(qid, username, type);
       if (status && 'error' in status) {
         throw new Error(status.error);
+      }
+
+      // Determine the vote impact: +1 for upvote, -1 for downvote
+      const voteImpact = type === 'upvote' ? 0.5 : -0.5;
+
+      // Fetch the question with its tags
+      const question = await QuestionModel.findById(qid).populate<{ tags: Tag[] }>('tags');
+      if (!question) {
+        throw new Error('Question not found');
+      }
+
+      const updates = question.tags
+        .map(tag => {
+          const tagName = tag.name as keyof typeof tagIndexMap;
+          const index = tagIndexMap[tagName];
+          return index !== undefined ? { index, value: voteImpact } : null;
+        })
+        .filter((update): update is { index: number; value: number } => update !== null);
+      // Fetch the user record to retrieve the user's ID
+      const userRecord = await UserModel.findOne({ username });
+      if (userRecord) {
+        await updateUserPreferences(userRecord._id.toString(), updates);
       }
 
       // Emit the updated vote counts to all connected clients
@@ -219,7 +275,7 @@ const questionController = (socket: FakeSOSocket) => {
    *
    * @returns A Promise that resolves to void.
    */
-  const upvoteQuestion = async (req: VoteRequest, res: Response): Promise<void> => {
+  const upvoteQuestion = async (req: QuestionVoteRequest, res: Response): Promise<void> => {
     voteQuestion(req, res, 'upvote');
   };
 
@@ -232,7 +288,7 @@ const questionController = (socket: FakeSOSocket) => {
    *
    * @returns A Promise that resolves to void.
    */
-  const downvoteQuestion = async (req: VoteRequest, res: Response): Promise<void> => {
+  const downvoteQuestion = async (req: QuestionVoteRequest, res: Response): Promise<void> => {
     voteQuestion(req, res, 'downvote');
   };
 

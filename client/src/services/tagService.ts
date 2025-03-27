@@ -5,8 +5,6 @@ const TAG_API_URL = `${process.env.REACT_APP_SERVER_URL}/tag`;
 
 /**
  * Function to get tags with the number of associated questions.
- *
- * @throws Error if there is an issue fetching tags with the question number.
  */
 const getTagsWithQuestionNumber = async (): Promise<TagData[]> => {
   const res = await api.get(`${TAG_API_URL}/getTagsWithQuestionNumber`);
@@ -18,9 +16,6 @@ const getTagsWithQuestionNumber = async (): Promise<TagData[]> => {
 
 /**
  * Function to get a tag by its name.
- *
- * @param name - The name of the tag to retrieve.
- * @throws Error if there is an issue fetching the tag by name.
  */
 const getTagByName = async (name: string): Promise<DatabaseTag> => {
   const res = await api.get(`${TAG_API_URL}/getTagByName/${name}`);
@@ -30,4 +25,15 @@ const getTagByName = async (name: string): Promise<DatabaseTag> => {
   return res.data;
 };
 
-export { getTagsWithQuestionNumber, getTagByName };
+/**
+ * Function to get the predefined list of tags.
+ */
+const getPredefinedTags = async (): Promise<TagData[]> => {
+  const res = await api.get(`${TAG_API_URL}/getPredefinedTags`);
+  if (res.status !== 200) {
+    throw new Error('Error when fetching predefined tags');
+  }
+  return res.data;
+};
+
+export { getTagsWithQuestionNumber, getTagByName, getPredefinedTags };

@@ -59,9 +59,11 @@ const useAnswerForm = () => {
       ansBy: user.username,
       ansDateTime: new Date(),
       comments: [],
+      upVotes: [],
+      downVotes: [],
     };
 
-    const res = await addAnswer(questionID, answer);
+    const res = await addAnswer.addAnswer(questionID, answer);
 
     if (res && res._id) {
       // navigate to the question that was answered

@@ -2,6 +2,7 @@
 import React, { useEffect, useState } from 'react';
 import './index.css';
 import useProfileSettings from '../../hooks/useProfileSettings';
+import InterestsCard from './InterestsCard';
 import {
   getTop10Leaderboard,
   getUserRank,
@@ -140,6 +141,12 @@ const ProfileSettings: React.FC = () => {
               <strong>Date Joined:</strong>{' '}
               {userData.dateJoined ? new Date(userData.dateJoined).toLocaleDateString() : 'N/A'}
             </p>
+
+            {/* ---- Interests/Preferences Section ---- */}
+            {canEditProfile && <InterestsCard />}
+
+            {/* ---- Interests/Preferences Section ---- */}
+            {canEditProfile && <InterestsCard />}
 
             {/* Reset Password Section */}
             {canEditProfile && (
