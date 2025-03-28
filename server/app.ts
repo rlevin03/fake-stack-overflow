@@ -16,6 +16,7 @@ import userController from './controllers/user.controller';
 import messageController from './controllers/message.controller';
 import chatController from './controllers/chat.controller';
 import gameController from './controllers/game.controller';
+import badgeController from './controllers/badge.controller';
 import leaderboardController from './controllers/leaderboard.controller';
 import sessionController from './controllers/session.controller';
 
@@ -42,7 +43,7 @@ function startServer() {
   });
 }
 
-socket.on('connection', (socket) => {
+socket.on('connection', socket => {
   console.log('A user connected ->', socket.id);
 
   socket.on('disconnect', () => {
@@ -63,7 +64,7 @@ app.use(
   cors({
     credentials: true,
     origin: [CLIENT_URL],
-  })
+  }),
 );
 
 app.use(express.json());

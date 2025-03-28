@@ -132,7 +132,7 @@ export const updateUser = async (
     const updatedUser: SafeDatabaseUser | null = await UserModel.findOneAndUpdate(
       { username },
       { $set: updates },
-      { new: true }
+      { new: true },
     )
       .select('-password')
       .lean();
@@ -150,11 +150,7 @@ export const updateUser = async (
  */
 export const getTop10ByPoints = async (): Promise<SafeDatabaseUser[] | { error: string }> => {
   try {
-    const top10 = await UserModel.find()
-      .select('-password')
-      .sort({ points: -1 })
-      .limit(10)
-      .lean();
+    const top10 = await UserModel.find().select('-password').sort({ points: -1 }).limit(10).lean();
     return top10;
   } catch (error: unknown) {
     return { error: `Error retrieving top 10 by points: ${formatError(error)}` };
@@ -186,7 +182,7 @@ export const getRankForUser = async (
  */
 export const updateUserPreferences = async (
   userId: string,
-  updates: { index: number; value: number }[]
+  updates: { index: number; value: number }[],
 ): Promise<UserResponse> => {
   try {
     const user = await UserModel.findById(userId);
@@ -222,7 +218,7 @@ export const updateUserPreferences = async (
  * with the questions' tag vectors using cosine similarity.
  */
 export const getUserRecommendations = async (
-  userId: string
+  userId: string,
 ): Promise<{ question: PopulatedDatabaseQuestion; similarity: number }[] | { error: string }> => {
   try {
     const user = await UserModel.findById(userId);
@@ -265,11 +261,11 @@ export const getUserRecommendations = async (
     };
 
     const recommendations = await Promise.all(
-      questions.map(async (question) => {
+      questions.map(async question => {
         const questionVector = tagsToVector(question.tags);
         const similarity = cosineSimilarity(user.preferences, questionVector);
         return { question, similarity };
-      })
+      }),
     );
     recommendations.sort((a, b) => b.similarity - a.similarity);
     return recommendations;

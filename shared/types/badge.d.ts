@@ -45,3 +45,13 @@ export interface Badge {
 export interface DatabaseBadge extends Badge {
   _id: ObjectId;
 }
+
+export interface GrantBadgeRequest extends Request {
+  params: {
+    userId: string;
+  };
+  body: {
+    badgeName: BadgeName;
+    progressGained: number;
+  };
+}
