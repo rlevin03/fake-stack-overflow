@@ -16,11 +16,13 @@ export interface UserCredentials {
  * - `username`: The unique username of the user.
  * - `password`: The user's password.
  * - `dateJoined`: The date when the user registered.
+ * - 'badges': The badges the user has earned.
  * - `biography`: A short description or bio of the user (optional).
- * - 'preferneces': The user's preferences for the application (optional).
+ * - 'preferences': The user's preferences for the application (optional).
  */
 export interface User extends UserCredentials {
   dateJoined: Date;
+  badges: ObjectId[];
   biography?: string;
   preferences: number[];
 }
