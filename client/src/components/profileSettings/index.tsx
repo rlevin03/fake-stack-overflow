@@ -1,13 +1,13 @@
 // client/src/components/ProfileSettings/index.tsx
 import React, { useEffect, useState } from 'react';
+import { io, Socket } from 'socket.io-client';
 import './index.css';
 import useProfileSettings from '../../hooks/useProfileSettings';
 import InterestsCard from './InterestsCard';
-import {
-  getTop10Leaderboard,
-  getUserRank,
-  LeaderboardUser,
-} from '../../services/leaderboardService';
+import { LeaderboardUser } from '../../services/leaderboardService';
+
+// Create a persistent socket connection (adjust URL/port as needed).
+const socket: Socket = io('http://localhost:8000');
 
 interface UserData {
   username: string;
@@ -45,41 +45,41 @@ const ProfileSettings: React.FC = () => {
   const [leaderboard, setLeaderboard] = useState<LeaderboardUser[]>([]);
   const [userRank, setUserRank] = useState<number | null>(null);
 
-  // Fetch the leaderboard once loading is finished,
-  // and fetch user rank only if userData is available.
+  /**
+   * useEffect: Setup socket listeners once loading is done.
+   * We'll request the top10 + user rank from the server,
+   * and handle real-time updates if the server emits them again.
+   */
   useEffect(() => {
     if (!loading) {
-      const fetchData = async () => {
-        try {
-          const top10 = await getTop10Leaderboard();
+      // Listen for server responses
+      socket.on('top10Response', (data: LeaderboardUser[]) => {
+        // Sort descending by points (just in case)
+        const sorted = [...data].sort((a, b) => b.points - a.points);
+        setLeaderboard(sorted);
+      });
 
-          // Sort by points descending, just in case the backend isn't sorted
-          const sorted = [...top10].sort((a, b) => b.points - a.points);
-          setLeaderboard(sorted);
+      socket.on('userRankResponse', (data: { rank: number }) => {
+        setUserRank(data.rank);
+      });
 
-          // If we have a user, also fetch their rank
-          if (userData?.username) {
-            const rank = await getUserRank(userData.username);
-            setUserRank(rank);
-          }
-        } catch (err) {
-          console.error('Error fetching leaderboard:', err);
-        }
+      // Request the latest top 10 from server
+      socket.emit('getTop10');
+
+      // If user is logged in, request that user's rank
+      if (userData?.username) {
+        socket.emit('getUserRank', { username: userData.username });
+      }
+
+      // Cleanup on unmount
+      return () => {
+        socket.off('top10Response');
+        socket.off('userRankResponse');
       };
-
-      fetchData();
     }
+    // If still loading, do nothing special
+    return undefined;
   }, [loading, userData]);
-
-  if (loading) {
-    return (
-      <div className='page-container'>
-        <div className='profile-card'>
-          <h2>Loading user data...</h2>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className='page-container' style={{ display: 'flex', gap: '2rem' }}>
@@ -212,10 +212,7 @@ const ProfileSettings: React.FC = () => {
           <ol className='leaderboard-list'>
             {leaderboard.map(user => (
               <li key={user._id || user.username} className='leaderboard-item'>
-                <span
-                  className='leaderboard-username'
-                  style={{ fontWeight: 'normal' }} // override bold if needed
-                >
+                <span className='leaderboard-username' style={{ fontWeight: 'normal' }}>
                   {user.username}
                 </span>
                 <span className='leaderboard-points'>{user.points} pts</span>
