@@ -82,7 +82,7 @@ export const addAnswerToQuestion = async (
 };
 /**
  * Adds a vote to a question.
- * @param {string} ansid - The question ID
+ * @param {string} ansid - The answer ID
  * @param {string} username - The username who voted
  * @param {'upvote' | 'downvote'} voteType - The vote type
  * @returns {Promise<AnswerVoteResponse>} - The updated vote result
