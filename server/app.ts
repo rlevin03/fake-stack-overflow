@@ -16,7 +16,6 @@ import userController from './controllers/user.controller';
 import messageController from './controllers/message.controller';
 import chatController from './controllers/chat.controller';
 import gameController from './controllers/game.controller';
-import badgeController from './controllers/badge.controller';
 import leaderboardController from './controllers/leaderboard.controller';
 import sessionController from './controllers/session.controller';
 

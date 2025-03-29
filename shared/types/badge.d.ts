@@ -55,3 +55,13 @@ export interface GrantBadgeRequest extends Request {
     progressGained: number;
   };
 }
+
+export interface CreateBadgeRequest extends Request {
+  params: {
+    userId: string;
+  };
+  body: {
+    name: BadgeName;
+    description: BadgeDescription;
+  };
+}
