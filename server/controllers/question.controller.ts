@@ -10,6 +10,8 @@ import {
   PopulatedDatabaseQuestion,
   QuestionVoteRequest,
   Tag,
+  BadgeName,
+  BadgeDescription,
 } from '../types/types';
 import {
   addVoteToQuestion,
@@ -26,9 +28,43 @@ import getGeminiResponse from '../services/gemini.service';
 import { saveAnswer, addAnswerToQuestion } from '../services/answer.service';
 import QuestionModel from '../models/questions.model';
 import UserModel from '../models/users.model';
+import { awardBadge, saveBadge } from '../services/badge.service';
+import BadgeModel from '../models/badge.model';
 
 const questionController = (socket: FakeSOSocket) => {
   const router = express.Router();
+
+  /**
+   * adds a badge to the user if it does not exist, or updates the progress of the badge if it does.
+   * @param username the username of the user to award the badge to
+   * @param badgeName the name of the badge to award
+   * @param badgeDescription the description of the badge to award
+   * @param progressGained the progress gained towards the badge
+   * @returns a promise that resolves to void
+   */
+  async function awardingBadgeHelper(
+    username: string,
+    badgeName: BadgeName,
+    badgeDescription: BadgeDescription,
+  ): Promise<void> {
+    const user = await UserModel.findOne({ username });
+    if (!user) {
+      throw new Error('User not found');
+    }
+    const badgeIds = user.badges;
+    const badge = await BadgeModel.findOne({ _id: { $in: badgeIds }, name: badgeName });
+    if (!badge) {
+      const createdBadge = await saveBadge(username, badgeName, badgeDescription);
+      if ('error' in createdBadge) {
+        throw new Error('Error in creating badge');
+      }
+    }
+
+    const updatedBadge = await awardBadge(username, badgeName);
+    if ('error' in updatedBadge) {
+      throw new Error('Error in updating badge progress');
+    }
+  }
 
   /**
    * Retrieves a list of questions filtered by a search term and ordered by a specified criterion.
@@ -270,6 +306,12 @@ const questionController = (socket: FakeSOSocket) => {
       if (userRecord) {
         await updateUserPreferences(userRecord._id.toString(), updates);
       }
+
+      // --- Begin: Update the curious cat badge progress ---
+      if (type === 'upvote' && status.upVotes.length === 1) {
+        await awardingBadgeHelper(username, BadgeName.CURIOUS_CAT, BadgeDescription.CURIOUS_CAT);
+      }
+      // --- End: Update the curious cat badge progress ---
 
       // Emit the updated vote counts to all connected clients
       socket.emit('voteUpdate', { qid, upVotes: status.upVotes, downVotes: status.downVotes });

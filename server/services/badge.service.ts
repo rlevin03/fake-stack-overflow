@@ -4,19 +4,13 @@ import BadgeModel from '../models/badge.model';
 
 /**
  * Checks the progress of a badge and then awards the badge if the progress is sufficient.
- *
- * @param {string} userId - The id of the user to check the badge for
- * @param {number} progressGained - The progress gained towards the badge
+ * @param {string} username - The username of the user to check the badge for
  * @param {BadgeName} badgeName - The badge to check the progress for
  * @returns {Promise<Badge>} - The progress of the badge or if it was awarded successfully
  */
-export const awardBadge = async (
-  userId: string,
-  progressGained: number,
-  badgeName: BadgeName,
-): Promise<Badge> => {
+export const awardBadge = async (username: string, badgeName: BadgeName): Promise<Badge> => {
   try {
-    const user: User | null = await UserModel.findById(userId).populate('badges').exec();
+    const user: User | null = await UserModel.findOne({ username });
     if (!user) {
       throw new Error('User not found');
     }
@@ -28,75 +22,31 @@ export const awardBadge = async (
     }
 
     switch (badgeName) {
-      case 'Curious Cat':
+      case BadgeName.CURIOUS_CAT:
         if (badge.progress >= 10) {
           badge.attained = true;
-          await badge.save();
-          return badge;
         } else {
-          badge.progress += progressGained;
-          await badge.save();
-          return badge;
+          badge.progress += 1;
         }
-      case 'Helping Hand':
+      case BadgeName.HELPING_HAND:
         if (badge.progress >= 5) {
           badge.attained = true;
-          await badge.save();
-          return badge;
         } else {
-          badge.progress += progressGained;
-          await badge.save();
-          return badge;
+          badge.progress += 1;
         }
-      case 'Lifeline':
-        badge.attained = true;
-        await badge.save();
-        return badge;
-      case 'Lightning Responder':
-        badge.attained = true;
-        await badge.save();
-        return badge;
-      case 'Respected Voice':
+      case BadgeName.RESPECTED_VOICE:
         if (badge.progress >= 500) {
           badge.attained = true;
-          await badge.save();
-          return badge;
         } else {
-          badge.progress += progressGained;
-          await badge.save();
-          return badge;
+          badge.progress += 1;
         }
-      case 'Peoples Champion':
-        if (badge.progress >= 50) {
-          badge.attained = true;
-          await badge.save();
-          return badge;
-        } else {
-          badge.progress += progressGained;
-          await badge.save();
-          return badge;
-        }
-      case 'Hidden Gem':
-        if (badge.progress >= 10) {
-          badge.attained = true;
-          await badge.save();
-          return badge;
-        } else {
-          badge.progress += progressGained;
-          await badge.save();
-          return badge;
-        }
-      case 'Pair Programmer':
-        badge.attained = true;
-        await badge.save();
-        return badge;
-      case 'The Historian':
-        badge.attained = true;
-        await badge.save();
-        return badge;
       default:
-        return badge;
+        // If the badge has no associated progress, we assume
+        // it is automatically attained if the service is called.
+        badge.attained = true;
     }
+    await badge.save();
+    return badge;
   } catch (error) {
     throw new Error(`Error awarding badge: ${error}`);
   }
@@ -104,18 +54,23 @@ export const awardBadge = async (
 
 /**
  * Creates a badge with certain name and description.
- * @param {string} userId - The id of the user to create the badge for
+ * @param {string} username - The uername of the user to create the badge for
  * @param {BadgeName} badgeName - The name of the badge to create
  * @param {BadgeDescription} badgeDescription - The description of the badge to create
  * @returns {Promise<Badge>} - The created badge
  * @throws {Error} - If there is an error creating the badge
  */
 export const saveBadge = async (
-  userId: string,
+  username: string,
   badgeName: BadgeName,
   badgeDescription: BadgeDescription,
 ): Promise<Badge> => {
   try {
+    const user = await UserModel.findOne({ username });
+    if (!user) {
+      throw new Error('User not found');
+    }
+
     const badge = await BadgeModel.create({
       badgeName,
       badgeDescription,
@@ -123,10 +78,7 @@ export const saveBadge = async (
     if (!badge) {
       throw new Error('Badge not created');
     }
-    const user = await UserModel.findById(userId);
-    if (!user) {
-      throw new Error('User not found');
-    }
+
     user.badges.push(badge._id);
     await user.save();
     return badge;

@@ -20,6 +20,7 @@ import {
   getTop10ByPoints,
   getRankForUser,
 } from '../services/user.service';
+import { ObjectId } from 'mongodb';
 
 const userController = (socket: FakeSOSocket) => {
   const router: Router = express.Router();
