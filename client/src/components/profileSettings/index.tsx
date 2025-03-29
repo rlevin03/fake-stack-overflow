@@ -1,13 +1,11 @@
 // client/src/components/ProfileSettings/index.tsx
-import React, { useEffect, useState } from 'react';
+
+import React, { useEffect, useState, useRef } from 'react';
 import { io, Socket } from 'socket.io-client';
 import './index.css';
 import useProfileSettings from '../../hooks/useProfileSettings';
 import InterestsCard from './InterestsCard';
 import { LeaderboardUser } from '../../services/leaderboardService';
-
-// Create a persistent socket connection (adjust URL/port as needed).
-const socket: Socket = io('http://localhost:8000');
 
 interface UserData {
   username: string;
@@ -45,41 +43,61 @@ const ProfileSettings: React.FC = () => {
   const [leaderboard, setLeaderboard] = useState<LeaderboardUser[]>([]);
   const [userRank, setUserRank] = useState<number | null>(null);
 
+  // Create a socket ref to persist the socket connection.
+  const socketRef = useRef<Socket | null>(null);
+
+  // Initialize the socket connection when the component mounts.
+  useEffect(() => {
+    socketRef.current = io('http://localhost:8000');
+
+    // Disconnect the socket when the component unmounts.
+    return () => {
+      socketRef.current?.disconnect();
+    };
+  }, []);
+
   /**
-   * useEffect: Setup socket listeners once loading is done.
-   * We'll request the top10 + user rank from the server,
-   * and handle real-time updates if the server emits them again.
+   * Setup socket listeners once loading is done.
+   * We'll request the top 10 and user rank from the server,
+   * and handle real-time updates.
    */
   useEffect(() => {
-    if (!loading) {
-      // Listen for server responses
-      socket.on('top10Response', (data: LeaderboardUser[]) => {
-        // Sort descending by points (just in case)
-        const sorted = [...data].sort((a, b) => b.points - a.points);
-        setLeaderboard(sorted);
-      });
-
-      socket.on('userRankResponse', (data: { rank: number }) => {
-        setUserRank(data.rank);
-      });
-
-      // Request the latest top 10 from server
-      socket.emit('getTop10');
-
-      // If user is logged in, request that user's rank
-      if (userData?.username) {
-        socket.emit('getUserRank', { username: userData.username });
-      }
-
-      // Cleanup on unmount
-      return () => {
-        socket.off('top10Response');
-        socket.off('userRankResponse');
-      };
+    if (loading) {
+      // Return an empty cleanup function if still loading.
+      return () => {};
     }
-    // If still loading, do nothing special
-    return undefined;
+
+    const socket = socketRef.current;
+    if (!socket) {
+      // Return an empty cleanup function if socket isn't available.
+      return () => {};
+    }
+
+    // Listen for server responses
+    socket.on('top10Response', (data: LeaderboardUser[]) => {
+      const sorted = [...data].sort((a, b) => b.points - a.points);
+      setLeaderboard(sorted);
+    });
+
+    socket.on('userRankResponse', (data: { rank: number }) => {
+      setUserRank(data.rank);
+    });
+
+    // Request data from the server
+    socket.emit('getTop10');
+    if (userData?.username) {
+      socket.emit('getUserRank', { username: userData.username });
+    }
+
+    // Return cleanup function to remove listeners on unmount.
+    return () => {
+      socket.off('top10Response');
+      socket.off('userRankResponse');
+    };
   }, [loading, userData]);
+
+  // Locate the current user entry in the leaderboard, if it exists.
+  const currentUserEntry = leaderboard.find(item => item.username === userData?.username);
 
   return (
     <div className='page-container' style={{ display: 'flex', gap: '2rem' }}>
@@ -224,9 +242,17 @@ const ProfileSettings: React.FC = () => {
         )}
 
         {userRank !== null && (
-          <p className='rank-info'>
-            Your overall rank: <strong>{userRank}</strong>
-          </p>
+          <div className='rank-info'>
+            <p>
+              Your overall rank: <strong>{userRank}</strong>
+            </p>
+            {currentUserEntry && (
+              <p>
+                <strong>{currentUserEntry.username}</strong> has{' '}
+                <strong>{currentUserEntry.points} pts</strong>
+              </p>
+            )}
+          </div>
         )}
       </div>
     </div>
