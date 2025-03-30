@@ -1,44 +1,44 @@
 // client/src/services/leaderboardService.ts
+import { io, Socket } from 'socket.io-client';
 
-const API_BASE = 'http://localhost:8000';
-
-/**
- * Interface for the user objects returned by the leaderboard.
- */
 export interface LeaderboardUser {
   _id?: string;
   username: string;
   points: number;
 }
 
-/**
- * Fetch top 10 users sorted by points (descending).
- * Returns an array of LeaderboardUser objects.
- */
+// Create a single socket connection to the server.
+// Adjust the URL if needed.
+const socket: Socket = io('http://localhost:8000');
+
+// Helper function to get the top 10 leaderboard using websockets.
 export async function getTop10Leaderboard(): Promise<LeaderboardUser[]> {
-  // Because you mounted your user routes at /user,
-  // the final URL for top10 is /user/top10 (NOT /api/users/top10).
-  const response = await fetch(`${API_BASE}/user/top10`);
-  if (!response.ok) {
-    throw new Error(`Failed to fetch top 10. Status: ${response.status} ${response.statusText}`);
-  }
-  // Cast or parse JSON as LeaderboardUser[]
-  return response.json() as Promise<LeaderboardUser[]>;
+  return new Promise((resolve, reject) => {
+    // Emit the event to request top 10 leaderboard.
+    socket.emit('getTop10');
+    // Listen for the response event (use 'once' so it only listens for a single response).
+    socket.once('top10Response', (data: LeaderboardUser[]) => {
+      resolve(data);
+    });
+    // Listen for an error event.
+    socket.once('error', (msg: string) => {
+      reject(new Error(msg));
+    });
+  });
 }
 
-/**
- * Fetch the rank for a specific user.
- * Returns a number (the rank).
- */
+// Helper function to get a user's rank using websockets.
 export async function getUserRank(username: string): Promise<number> {
-  // Because you mounted your user routes at /user,
-  // the final URL for rank is /user/leaderboard/user-rank?username=...
-  const response = await fetch(
-    `${API_BASE}/user/leaderboard/user-rank?username=${encodeURIComponent(username)}`,
-  );
-  if (!response.ok) {
-    throw new Error(`Failed to fetch user rank. Status: ${response.status} ${response.statusText}`);
-  }
-  const data = await response.json();
-  return data.rank;
+  return new Promise((resolve, reject) => {
+    // Emit the event with the username.
+    socket.emit('getUserRank', { username });
+    // Listen for the rank response.
+    socket.once('userRankResponse', (data: { rank: number }) => {
+      resolve(data.rank);
+    });
+    // Listen for an error event.
+    socket.once('error', (msg: string) => {
+      reject(new Error(msg));
+    });
+  });
 }

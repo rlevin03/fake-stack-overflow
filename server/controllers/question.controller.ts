@@ -30,17 +30,11 @@ const questionController = (socket: FakeSOSocket) => {
 
   /**
    * Retrieves a list of questions filtered by a search term and ordered by a specified criterion.
-   * If there is an error, the HTTP response's status is updated.
-   *
-   * @param req The FindQuestionRequest object containing the query parameters `order` and `search`.
-   * @param res The HTTP response object used to send back the filtered list of questions.
-   *
-   * @returns A Promise that resolves to void.
    */
   const getQuestionsByFilter = async (req: FindQuestionRequest, res: Response): Promise<void> => {
-    const { order } = req.query;
-    const { search } = req.query;
-    const { askedBy } = req.query;
+    const order = (req.query.order as string) || 'mostViewed';
+    const search = (req.query.search as string) || '';
+    const askedBy = req.query.askedBy as string | undefined;
 
     try {
       let qlist: PopulatedDatabaseQuestion[] = await getQuestionsByOrder(order);
@@ -64,23 +58,17 @@ const questionController = (socket: FakeSOSocket) => {
 
   /**
    * Retrieves a question by its unique ID, and increments the view count for that question.
-   * If there is an error, the HTTP response's status is updated.
-   *
-   * @param req The FindQuestionByIdRequest object containing the question ID as a parameter.
-   * @param res The HTTP response object used to send back the question details.
-   *
-   * @returns A Promise that resolves to void.
    */
   const getQuestionById = async (req: FindQuestionByIdRequest, res: Response): Promise<void> => {
     const { qid } = req.params;
-    const { username } = req.query;
+    const username = req.query.username as string | undefined;
 
     if (!ObjectId.isValid(qid)) {
       res.status(400).send('Invalid ID format');
       return;
     }
 
-    if (username === undefined) {
+    if (!username) {
       res.status(400).send('Invalid username requesting question.');
       return;
     }
@@ -93,7 +81,6 @@ const questionController = (socket: FakeSOSocket) => {
       }
 
       // Update user preferences based on the question's tags for a view.
-      // A lower impact is applied for views (e.g. 0.2) compared to votes or asking.
       const viewImpact = 0.1;
       const updates = q.tags
         .map(tag => {
@@ -122,10 +109,6 @@ const questionController = (socket: FakeSOSocket) => {
 
   /**
    * Validates the question object to ensure it contains all the necessary fields.
-   *
-   * @param question The question object to validate.
-   *
-   * @returns `true` if the question is valid, otherwise `false`.
    */
   const isQuestionBodyValid = (question: Question): boolean =>
     question.title !== undefined &&
@@ -140,13 +123,7 @@ const questionController = (socket: FakeSOSocket) => {
     question.askDateTime !== null;
 
   /**
-   * Adds a new question to the database. The question is first validated and then saved.
-   * If the tags are invalid or saving the question fails, the HTTP response status is updated.
-   *
-   * @param req The AddQuestionRequest object containing the question data.
-   * @param res The HTTP response object used to send back the result of the operation.
-   *
-   * @returns A Promise that resolves to void.
+   * Adds a new question to the database.
    */
   const addQuestion = async (req: AddQuestionRequest, res: Response): Promise<void> => {
     if (!isQuestionBodyValid(req.body)) {
@@ -166,7 +143,8 @@ const questionController = (socket: FakeSOSocket) => {
         throw new Error('Invalid tags');
       }
 
-      const result = await saveQuestion(questionswithtags);
+      // Pass the socket as the second argument to saveQuestion
+      const result = await saveQuestion(questionswithtags, socket);
 
       if ('error' in result) {
         throw new Error(result.error);
@@ -178,8 +156,7 @@ const questionController = (socket: FakeSOSocket) => {
       if ('error' in populatedQuestion) {
         throw new Error(populatedQuestion.error);
       }
-      // Update user preferences based on the question's tags (for asking a question)
-      // For each tag in the question, we add +1 to the corresponding index.
+      // Update user preferences based on the question's tags for asking a question
       const voteImpact = 1; // Increase by 1 for asking a question
       const updates = (populatedQuestion as PopulatedDatabaseQuestion).tags
         .map((tag: Tag) => {
@@ -189,7 +166,6 @@ const questionController = (socket: FakeSOSocket) => {
         })
         .filter((update): update is { index: number; value: number } => update !== null);
 
-      // Retrieve the user record based on the askedBy field
       const userRecord = await UserModel.findOne({
         username: (populatedQuestion as PopulatedDatabaseQuestion).askedBy,
       });
@@ -210,12 +186,6 @@ const questionController = (socket: FakeSOSocket) => {
 
   /**
    * Helper function to handle upvoting or downvoting a question.
-   *
-   * @param req The VoteRequest object containing the question ID and the username.
-   * @param res The HTTP response object used to send back the result of the operation.
-   * @param type The type of vote to perform (upvote or downvote).
-   *
-   * @returns A Promise that resolves to void.
    */
   const voteQuestion = async (
     req: QuestionVoteRequest,
@@ -230,13 +200,13 @@ const questionController = (socket: FakeSOSocket) => {
     const { qid, username } = req.body;
 
     try {
-      // Register the vote
-      const status = await addVoteToQuestion(qid, username, type);
+      // Register the vote and pass the socket so the service can broadcast the updated leaderboard
+      const status = await addVoteToQuestion(qid, username, type, socket);
       if (status && 'error' in status) {
         throw new Error(status.error);
       }
 
-      // Determine the vote impact: +1 for upvote, -1 for downvote
+      // Determine the vote impact: +0.5 for upvote, -0.5 for downvote
       const voteImpact = type === 'upvote' ? 0.5 : -0.5;
 
       // Fetch the question with its tags
@@ -267,32 +237,20 @@ const questionController = (socket: FakeSOSocket) => {
   };
 
   /**
-   * Handles upvoting a question. The request must contain the question ID (qid) and the username.
-   * If the request is invalid or an error occurs, the appropriate HTTP response status and message are returned.
-   *
-   * @param req The VoteRequest object containing the question ID and the username.
-   * @param res The HTTP response object used to send back the result of the operation.
-   *
-   * @returns A Promise that resolves to void.
+   * Handles upvoting a question.
    */
   const upvoteQuestion = async (req: QuestionVoteRequest, res: Response): Promise<void> => {
     voteQuestion(req, res, 'upvote');
   };
 
   /**
-   * Handles downvoting a question. The request must contain the question ID (qid) and the username.
-   * If the request is invalid or an error occurs, the appropriate HTTP response status and message are returned.
-   *
-   * @param req The VoteRequest object containing the question ID and the username.
-   * @param res The HTTP response object used to send back the result of the operation.
-   *
-   * @returns A Promise that resolves to void.
+   * Handles downvoting a question.
    */
   const downvoteQuestion = async (req: QuestionVoteRequest, res: Response): Promise<void> => {
     voteQuestion(req, res, 'downvote');
   };
 
-  // add appropriate HTTP verbs and their endpoints to the router
+  // Define endpoints with appropriate HTTP verbs
   router.get('/getQuestion', getQuestionsByFilter);
   router.get('/getQuestionById/:qid', getQuestionById);
   router.post('/addQuestion', addQuestion);
