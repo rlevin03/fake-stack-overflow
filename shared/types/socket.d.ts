@@ -94,6 +94,22 @@ export interface GameMovePayload {
 }
 
 /**
+ * Payload for a session update event.
+ * - `session`: The updated session document.
+ * - `type`: The type of update ('created' or 'updated').
+ */
+export interface SessionUpdatePayload {
+  session: {
+    _id: ObjectId;
+    versions: string[];
+    createdBy?: ObjectId;
+    createdAt?: Date;
+    updatedAt?: Date;
+  };
+  type: 'created' | 'updated';
+}
+
+/**
  * Interface representing the events the client can emit to the server.
  * - `makeMove`: Client can emit a move in the game.
  * - `joinGame`: Client can join a game.
@@ -135,6 +151,7 @@ export interface ServerToClientEvents {
   gameUpdate: (game: GameUpdatePayload) => void;
   gameError: (error: GameErrorPayload) => void;
   chatUpdate: (chat: ChatUpdatePayload) => void;
+  sessionUpdate: (payload: SessionUpdatePayload) => void;
 
   // --- NEW EVENTS FOR LEADERBOARD ---
   userRankResponse: (payload: { rank: number }) => void;
