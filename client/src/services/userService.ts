@@ -159,6 +159,20 @@ const updatePreferences = async (
   return res.data;
 };
 
+/**
+ * Updates the user's AI toggle setting.
+ * @param username - The unique username of the user.
+ * @param aiToggler - The new AI toggle setting.
+ * @returns The updated user object.
+ */
+const updateAIToggler = async (username: string, aiToggler: boolean): Promise<SafeDatabaseUser> => {
+  const res = await api.patch(`${USER_API_URL}/updateAIToggler`, { username, aiToggler });
+  if (res.status !== 200) {
+    throw new Error('Error when updating AI toggle');
+  }
+  return res.data;
+};
+
 export {
   getUsers,
   getUserByUsername,
@@ -169,4 +183,5 @@ export {
   updateBiography,
   getRecommendations,
   updatePreferences,
+  updateAIToggler,
 };

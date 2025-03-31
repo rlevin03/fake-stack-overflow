@@ -13,6 +13,7 @@ import {
   Question,
   QuestionResponse,
   QuestionVoteResponse,
+  FakeSOSocket,
 } from '../types/types';
 import AnswerModel from '../models/answers.model';
 import QuestionModel from '../models/questions.model';
@@ -29,7 +30,6 @@ import {
 import UserModel from '../models/users.model';
 
 // NEW IMPORTS:
-import { FakeSOSocket } from '../types/types';
 import { getTop10ByPoints, getRankForUser } from './user.service';
 
 /**

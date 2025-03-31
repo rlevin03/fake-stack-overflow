@@ -22,6 +22,8 @@ import {
 import { processTags } from '../services/tag.service';
 import { populateDocument } from '../utils/database.util';
 import { updateUserPreferences } from '../services/user.service';
+import getGeminiResponse from '../services/gemini.service';
+import { saveAnswer, addAnswerToQuestion } from '../services/answer.service';
 import QuestionModel from '../models/questions.model';
 import UserModel from '../models/users.model';
 
@@ -143,22 +145,24 @@ const questionController = (socket: FakeSOSocket) => {
         throw new Error('Invalid tags');
       }
 
-      // Pass the socket as the second argument to saveQuestion
+      // Save the question and broadcast updates
       const result = await saveQuestion(questionswithtags, socket);
-
       if ('error' in result) {
         throw new Error(result.error);
       }
 
-      // Populates the fields of the question that was added, and emits the new object
-      const populatedQuestion = await populateDocument(result._id.toString(), 'question');
-
+      // Populate the new question document and cast it as a PopulatedDatabaseQuestion
+      const populatedQuestion = (await populateDocument(
+        result._id.toString(),
+        'question',
+      )) as PopulatedDatabaseQuestion;
       if ('error' in populatedQuestion) {
-        throw new Error(populatedQuestion.error);
+        throw new Error(String(populatedQuestion.error));
       }
-      // Update user preferences based on the question's tags for asking a question
-      const voteImpact = 1; // Increase by 1 for asking a question
-      const updates = (populatedQuestion as PopulatedDatabaseQuestion).tags
+
+      // Update user preferences for asking a question (+1 per tag)
+      const voteImpact = 1;
+      const updates = populatedQuestion.tags
         .map((tag: Tag) => {
           const tagName = tag.name as keyof typeof tagIndexMap;
           const index = tagIndexMap[tagName];
@@ -166,15 +170,54 @@ const questionController = (socket: FakeSOSocket) => {
         })
         .filter((update): update is { index: number; value: number } => update !== null);
 
-      const userRecord = await UserModel.findOne({
-        username: (populatedQuestion as PopulatedDatabaseQuestion).askedBy,
-      });
+      const userRecord = await UserModel.findOne({ username: populatedQuestion.askedBy });
       if (userRecord) {
         await updateUserPreferences(userRecord._id.toString(), updates);
       }
 
-      socket.emit('questionUpdate', populatedQuestion as PopulatedDatabaseQuestion);
+      socket.emit('questionUpdate', populatedQuestion);
       res.json(populatedQuestion);
+
+      // ----- NEW: Trigger AI-generated answer asynchronously -----
+      if (userRecord && userRecord.aiToggler) {
+        // Build a prompt using the question's title and text
+        const prompt = `${populatedQuestion.title}\n\n${populatedQuestion.text}`;
+
+        // Call the Gemini API to generate an answer
+        getGeminiResponse(prompt)
+          .then(async (generatedText: string) => {
+            try {
+              // Prepend the italicized label to the generated text
+              const aiAnswerText = `<em>AI-Generated Answer</em> ${generatedText}`;
+
+              // Build the AI answer object. Ensure it has all required fields.
+              const aiAnswer = {
+                text: aiAnswerText,
+                ansBy: 'AI',
+                ansDateTime: new Date(),
+                upVotes: [] as string[],
+                downVotes: [] as string[],
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                comments: [] as any[],
+              };
+
+              // Save the AI-generated answer
+              const savedAiAnswer = await saveAnswer(aiAnswer);
+              if (!('error' in savedAiAnswer)) {
+                // Attach the answer to the question thread
+                await addAnswerToQuestion(populatedQuestion._id.toString(), savedAiAnswer);
+                // Emit a custom event to update connected clients
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                (socket as any).emit('aiAnswerUpdate', savedAiAnswer);
+              }
+            } catch (error) {
+              console.error('Error saving AI-generated answer:', error);
+            }
+          })
+          .catch((error: unknown) => {
+            console.error('Error generating AI answer:', error);
+          });
+      }
     } catch (err: unknown) {
       if (err instanceof Error) {
         res.status(500).send(`Error when saving question: ${err.message}`);
