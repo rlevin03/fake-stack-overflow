@@ -1,6 +1,6 @@
-import { Badge, BadgeDescription, BadgeName, User } from '@fake-stack-overflow/shared';
 import UserModel from '../models/users.model';
 import BadgeModel from '../models/badge.model';
+import { Badge, BadgeDescription, BadgeName, User } from '../types/types';
 
 /**
  * Checks the progress of a badge and then awards the badge if the progress is sufficient.
@@ -28,18 +28,21 @@ export const awardBadge = async (username: string, badgeName: BadgeName): Promis
         } else {
           badge.progress += 1;
         }
+        break;
       case BadgeName.HELPING_HAND:
         if (badge.progress >= 5) {
           badge.attained = true;
         } else {
           badge.progress += 1;
         }
+        break;
       case BadgeName.RESPECTED_VOICE:
         if (badge.progress >= 500) {
           badge.attained = true;
         } else {
           badge.progress += 1;
         }
+        break;
       default:
         // If the badge has no associated progress, we assume
         // it is automatically attained if the service is called.
