@@ -1,7 +1,6 @@
 import express, { Response } from 'express';
 import { ObjectId } from 'mongodb';
-import tagIndexMap from '../../shared/tagIndexMap.json';
-
+import tagIndexMap from '@fake-stack-overflow/shared/tagIndexMap.json';
 import { addAnswerToQuestion, addVoteToAnswer, saveAnswer } from '../services/answer.service';
 import { populateDocument } from '../utils/database.util';
 import QuestionModel from '../models/questions.model';
@@ -17,7 +16,7 @@ import {
   Tag,
 } from '../types/types';
 import { awardingBadgeHelper } from '../utils/badge.util';
-import { BadgeName, BadgeDescription } from '../../shared/types/badge';
+import { BadgeDescription, BadgeName } from '@fake-stack-overflow/shared';
 
 const answerController = (socket: FakeSOSocket) => {
   const router = express.Router();
