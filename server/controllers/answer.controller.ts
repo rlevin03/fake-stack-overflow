@@ -6,8 +6,6 @@ import { populateDocument } from '../utils/database.util';
 import QuestionModel from '../models/questions.model';
 import UserModel from '../models/users.model';
 import { updateUserPreferences } from '../services/user.service';
-import { awardBadge, saveBadge } from '../services/badge.service';
-import BadgeModel from '../models/badge.model';
 import AnswerModel from '../models/answers.model';
 import {
   AddAnswerRequest,
@@ -21,6 +19,9 @@ import {
 } from '../types/types';
 import { awardingBadgeHelper } from '../utils/badge.util';
 import { BadgeName, BadgeDescription } from '../types/badgeConstants';
+import { awardBadge } from '../services/badge.service';
+import { saveBadge } from '../services/badge.service';
+import BadgeModel from '../models/badge.model';
 
 const answerController = (socket: FakeSOSocket) => {
   const router = express.Router();

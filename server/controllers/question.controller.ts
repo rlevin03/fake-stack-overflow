@@ -1,6 +1,6 @@
 import express, { Response } from 'express';
 import { ObjectId } from 'mongodb';
-import tagIndexMap from '@fake-stack-overflow/shared/tagIndexMap.json';
+import tagIndexMap from '../../shared/tagIndexMap.json';
 import {
   Question,
   FindQuestionRequest,
