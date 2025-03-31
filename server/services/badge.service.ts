@@ -1,24 +1,40 @@
 import UserModel from '../models/users.model';
 import BadgeModel from '../models/badge.model';
-import { Badge, BadgeDescription, BadgeName, User } from '../types/types';
+import { Badge, BadgeDescription, BadgeName } from '@fake-stack-overflow/shared';
 
 /**
  * Checks the progress of a badge and then awards the badge if the progress is sufficient.
  * @param {string} username - The username of the user to check the badge for
  * @param {BadgeName} badgeName - The badge to check the progress for
+ * @param {BadgeDescription} badgeDescription - The description of the badge
+ * @param {number} progressIncrement - The amount to increment the progress by
  * @returns {Promise<Badge>} - The progress of the badge or if it was awarded successfully
  */
-export const awardBadge = async (username: string, badgeName: BadgeName): Promise<Badge> => {
+export const awardBadge = async (
+  username: string,
+  badgeName: BadgeName,
+  badgeDescription: BadgeDescription,
+  progressIncrement: number = 1,
+): Promise<Badge> => {
   try {
-    const user: User | null = await UserModel.findOne({ username });
+    const user = await UserModel.findOne({ username });
     if (!user) {
       throw new Error('User not found');
     }
 
     const badgeIds = user.badges;
-    const badge = await BadgeModel.findOne({ _id: { $in: badgeIds }, name: badgeName });
+    let badge = await BadgeModel.findOne({ _id: { $in: badgeIds }, name: badgeName });
+
+    // If badge doesn't exist, create it first
     if (!badge) {
-      throw new Error('Badge not found');
+      badge = await BadgeModel.create({
+        name: badgeName,
+        description: badgeDescription,
+        progress: 0,
+        attained: false,
+      });
+      user.badges.push(badge._id);
+      await user.save();
     }
 
     switch (badgeName) {
@@ -26,27 +42,28 @@ export const awardBadge = async (username: string, badgeName: BadgeName): Promis
         if (badge.progress >= 10) {
           badge.attained = true;
         } else {
-          badge.progress += 1;
+          badge.progress += progressIncrement;
         }
         break;
       case BadgeName.HELPING_HAND:
         if (badge.progress >= 5) {
           badge.attained = true;
         } else {
-          badge.progress += 1;
+          badge.progress += progressIncrement;
         }
         break;
       case BadgeName.RESPECTED_VOICE:
         if (badge.progress >= 500) {
           badge.attained = true;
         } else {
-          badge.progress += 1;
+          badge.progress += progressIncrement;
         }
         break;
       default:
         // If the badge has no associated progress, we assume
         // it is automatically attained if the service is called.
         badge.attained = true;
+        break;
     }
     await badge.save();
     return badge;
@@ -57,7 +74,7 @@ export const awardBadge = async (username: string, badgeName: BadgeName): Promis
 
 /**
  * Creates a badge with certain name and description.
- * @param {string} username - The uername of the user to create the badge for
+ * @param {string} username - The username of the user to create the badge for
  * @param {BadgeName} badgeName - The name of the badge to create
  * @param {BadgeDescription} badgeDescription - The description of the badge to create
  * @returns {Promise<Badge>} - The created badge
@@ -75,8 +92,10 @@ export const saveBadge = async (
     }
 
     const badge = await BadgeModel.create({
-      badgeName,
-      badgeDescription,
+      name: badgeName,
+      description: badgeDescription,
+      progress: 0,
+      attained: false,
     });
     if (!badge) {
       throw new Error('Badge not created');
