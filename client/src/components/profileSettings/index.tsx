@@ -37,6 +37,8 @@ const ProfileSettings: React.FC = () => {
     handleResetPassword,
     handleUpdateBiography,
     handleDeleteUser,
+    aiToggler,
+    handleToggleAIToggler,
   } = useProfileSettings();
 
   // Leaderboard state
@@ -159,6 +161,15 @@ const ProfileSettings: React.FC = () => {
               <strong>Date Joined:</strong>{' '}
               {userData.dateJoined ? new Date(userData.dateJoined).toLocaleDateString() : 'N/A'}
             </p>
+
+            {/* ----- AI Settings Section ----- */}
+            <div className='ai-settings'>
+              <h4>AI Settings</h4>
+              <label>
+                <input type='checkbox' checked={aiToggler} onChange={handleToggleAIToggler} />
+                Enable AI-Generated Answers
+              </label>
+            </div>
 
             {/* ---- Interests/Preferences Section ---- */}
             {canEditProfile && <InterestsCard />}

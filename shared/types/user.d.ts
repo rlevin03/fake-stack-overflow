@@ -23,6 +23,7 @@ export interface User extends UserCredentials {
   dateJoined: Date;
   biography?: string;
   preferences: number[];
+  aiToggler: boolean;
 }
 
 /**

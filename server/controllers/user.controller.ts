@@ -59,6 +59,7 @@ const userController = (socket: FakeSOSocket) => {
       biography: requestUser.biography ?? '',
       // initialize a 1000-point preference array
       preferences: new Array(1000).fill(0),
+      aiToggler: true,
     };
 
     try {
@@ -303,6 +304,31 @@ const userController = (socket: FakeSOSocket) => {
     }
   };
 
+  /**
+   * Updates a user's AI toggle setting.
+   */
+  const updateAIToggler = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const { username, aiToggler } = req.body;
+      if (!username || typeof aiToggler !== 'boolean') {
+        res.status(400).send('Invalid request body: username and aiToggler (boolean) are required');
+        return;
+      }
+      const updatedUser = await updateUser(username, { aiToggler });
+      if ('error' in updatedUser) {
+        throw new Error(updatedUser.error);
+      }
+      // Emit socket event for real-time updates (optional)
+      socket.emit('userUpdate', {
+        user: updatedUser,
+        type: 'updated',
+      });
+      res.status(200).json(updatedUser);
+    } catch (error) {
+      res.status(500).send(`Error when updating AI toggle: ${error}`);
+    }
+  };
+
   // ---------------- REGISTER ALL ROUTES ----------------
   router.post('/signup', createUser);
   router.post('/login', userLogin);
@@ -313,6 +339,7 @@ const userController = (socket: FakeSOSocket) => {
   router.patch('/updateBiography', updateBiography);
   router.patch('/updatePreferences', updatePreferences);
   router.get('/getRecommendations/:userId', getRecommendations);
+  router.patch('/updateAIToggler', updateAIToggler);
 
   // Add the new leaderboard routes:
   router.get('/top10', getTop10);

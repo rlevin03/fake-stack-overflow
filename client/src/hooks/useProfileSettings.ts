@@ -5,6 +5,7 @@ import {
   deleteUser,
   resetPassword,
   updateBiography,
+  updateAIToggler,
 } from '../services/userService';
 import { SafeDatabaseUser } from '../types/types';
 import useUserContext from './useUserContext';
@@ -33,6 +34,8 @@ const useProfileSettings = () => {
 
   const [showPassword, setShowPassword] = useState(false);
 
+  const [aiToggler, setAiToggler] = useState<boolean>(true);
+
   const canEditProfile =
     currentUser.username && userData?.username ? currentUser.username === userData.username : false;
 
@@ -54,6 +57,13 @@ const useProfileSettings = () => {
 
     fetchUserData();
   }, [username]);
+
+  // Update aiToggler state when userData changes
+  useEffect(() => {
+    if (userData && typeof userData.aiToggler === 'boolean') {
+      setAiToggler(userData.aiToggler);
+    }
+  }, [userData]);
 
   /**
    * Toggles the visibility of the password fields.
@@ -119,6 +129,24 @@ const useProfileSettings = () => {
   };
 
   /**
+   * Handler for toggling the AI setting.
+   */
+  const handleToggleAIToggler = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newValue = e.target.checked;
+    setAiToggler(newValue);
+    if (!username) return;
+    try {
+      const updatedUser = await updateAIToggler(username, newValue);
+      setUserData(updatedUser);
+      setSuccessMessage('AI setting updated!');
+      setErrorMessage(null);
+    } catch (error) {
+      setErrorMessage('Failed to update AI setting.');
+      setSuccessMessage(null);
+    }
+  };
+
+  /**
    * Handler for deleting the user (triggers confirmation modal)
    */
   const handleDeleteUser = () => {
@@ -162,6 +190,8 @@ const useProfileSettings = () => {
     handleResetPassword,
     handleUpdateBiography,
     handleDeleteUser,
+    aiToggler,
+    handleToggleAIToggler,
   };
 };
 
