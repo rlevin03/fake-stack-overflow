@@ -11,7 +11,7 @@ import {
   QuestionVoteRequest,
   Tag,
 } from '../types/types';
-import { BadgeDescription, BadgeName } from '@fake-stack-overflow/shared';
+import { BadgeDescription, BadgeName } from '../types/types';
 import {
   addVoteToQuestion,
   fetchAndIncrementQuestionViewsById,
