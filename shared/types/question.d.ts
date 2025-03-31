@@ -24,7 +24,7 @@ export type OrderType = 'newest' | 'unanswered' | 'active' | 'mostViewed' | 'rel
  * - `answers`: An array of answers related to the question.
  * - `views`: An array of usernames who have viewed the question.
  * - `upVotes`: An array of usernames who have upvoted the question.
- * - `downVotes`: An array of usernames who have downvoted the question.
+ * - `downVotes`: An array of usernames who have downvoted the que stion.
  * - `comments`: An array of comments related to the question.
  */
 export interface Question {

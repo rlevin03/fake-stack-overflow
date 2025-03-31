@@ -72,7 +72,7 @@ const userSchema: Schema = new Schema(
       default: [],
     },
     sessionsAttended: {
-      type: [String],
+      type: [{ type: Schema.Types.ObjectId, ref: 'Session' }],
       default: [],
     },
     aiToggler: {
