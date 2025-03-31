@@ -1,6 +1,6 @@
 import express, { Response } from 'express';
 import { ObjectId } from 'mongodb';
-import tagIndexMap from '../../shared/tagIndexMap.json';
+import tagIndexMap from '@fake-stack-overflow/shared/tagIndexMap.json';
 import {
   Question,
   FindQuestionRequest,
@@ -11,7 +11,7 @@ import {
   QuestionVoteRequest,
   Tag,
 } from '../types/types';
-import { BadgeName, BadgeDescription } from '../../shared/types/badge';
+import { BadgeDescription, BadgeName } from '@fake-stack-overflow/shared';
 import {
   addVoteToQuestion,
   fetchAndIncrementQuestionViewsById,
