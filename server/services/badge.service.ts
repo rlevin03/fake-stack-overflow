@@ -1,6 +1,6 @@
 import UserModel from '../models/users.model';
 import BadgeModel from '../models/badge.model';
-import { Badge, BadgeDescription, BadgeName } from '@fake-stack-overflow/shared';
+import { Badge, BadgeDescription, BadgeName } from '../types/types';
 
 /**
  * Checks the progress of a badge and then awards the badge if the progress is sufficient.

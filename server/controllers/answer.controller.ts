@@ -16,7 +16,7 @@ import {
   Tag,
 } from '../types/types';
 import { awardingBadgeHelper } from '../utils/badge.util';
-import { BadgeDescription, BadgeName } from '@fake-stack-overflow/shared';
+import { BadgeDescription, BadgeName } from '../types/types';
 
 const answerController = (socket: FakeSOSocket) => {
   const router = express.Router();
