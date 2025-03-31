@@ -1,5 +1,5 @@
 import express, { Request, Response, Router } from 'express';
-import tagIndexMap from '../../shared/tagIndexMap.json'; // Import the predefined tag map
+import tagIndexMap from '@fake-stack-overflow/shared/tagIndexMap.json'; // Import the predefined tag map
 import { getTagCountMap } from '../services/tag.service';
 import TagModel from '../models/tags.model';
 import { DatabaseTag } from '../types/types';
