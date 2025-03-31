@@ -1,5 +1,4 @@
 import { ObjectId } from 'mongodb';
-import { Request, Response, NextFunction, Router } from 'express';
 
 export enum BadgeName {
   CURIOUS_CAT = 'Curious Cat',
@@ -48,24 +47,4 @@ export interface Badge {
  */
 export interface DatabaseBadge extends Badge {
   _id: ObjectId;
-}
-
-export interface GrantBadgeRequest extends Request {
-  params: {
-    userId: string;
-  };
-  body: {
-    badgeName: BadgeName;
-    progressGained: number;
-  };
-}
-
-export interface CreateBadgeRequest extends Request {
-  params: {
-    userId: string;
-  };
-  body: {
-    name: BadgeName;
-    description: BadgeDescription;
-  };
 }
