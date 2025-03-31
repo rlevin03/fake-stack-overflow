@@ -1,6 +1,6 @@
 import UserModel from '../models/users.model';
 import BadgeModel from '../models/badge.model';
-import { BadgeDescription, BadgeName } from '@fake-stack-overflow/shared';
+import { BadgeDescription, BadgeName } from '../types/types';
 import { awardBadge, saveBadge } from '../services/badge.service';
 
 /**
