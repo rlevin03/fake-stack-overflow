@@ -1,25 +1,23 @@
 import express, { Response } from 'express';
 import { ObjectId } from 'mongodb';
-import tagIndexMap from '@fake-stack-overflow/shared/tagIndexMap.json';
+import tagIndexMap from '../../shared/tagIndexMap.json';
 
 import { addAnswerToQuestion, addVoteToAnswer, saveAnswer } from '../services/answer.service';
 import { populateDocument } from '../utils/database.util';
 import QuestionModel from '../models/questions.model';
 import UserModel from '../models/users.model';
 import { updateUserPreferences } from '../services/user.service';
-import { awardBadge, saveBadge } from '../services/badge.service';
-import BadgeModel from '../models/badge.model';
 import AnswerModel from '../models/answers.model';
 import {
   AddAnswerRequest,
   Answer,
   AnswerVoteRequest,
-  BadgeDescription,
-  BadgeName,
   FakeSOSocket,
   PopulatedDatabaseAnswer,
   Tag,
 } from '../types/types';
+import { awardingBadgeHelper } from '../utils/badge.util';
+import { BadgeName, BadgeDescription } from '../../shared/types/badge';
 
 const answerController = (socket: FakeSOSocket) => {
   const router = express.Router();
@@ -44,38 +42,6 @@ const answerController = (socket: FakeSOSocket) => {
    */
   function isAnswerValid(ans: Answer): boolean {
     return !!ans.text && !!ans.ansBy && !!ans.ansDateTime;
-  }
-
-  /**
-   * adds a badge to the user if it does not exist, and updates the progress of the badge does.
-   * @param username the username of the user to award the badge to
-   * @param badgeName the name of the badge to award
-   * @param badgeDescription the description of the badge to award
-   * @param progressGained the progress gained towards the badge
-   * @returns a promise that resolves to void
-   */
-  async function awardingBadgeHelper(
-    username: string,
-    badgeName: BadgeName,
-    badgeDescription: BadgeDescription,
-  ): Promise<void> {
-    const user = await UserModel.findOne({ username });
-    if (!user) {
-      throw new Error('User not found');
-    }
-    const badgeIds = user.badges;
-    const badge = await BadgeModel.findOne({ _id: { $in: badgeIds }, name: badgeName });
-    if (!badge) {
-      const createdBadge = await saveBadge(username, badgeName, badgeDescription);
-      if ('error' in createdBadge) {
-        throw new Error('Error in creating badge');
-      }
-    }
-
-    const updatedBadge = await awardBadge(username, badgeName);
-    if ('error' in updatedBadge) {
-      throw new Error('Error in updating badge progress');
-    }
   }
 
   /**
