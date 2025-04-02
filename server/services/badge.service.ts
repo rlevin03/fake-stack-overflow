@@ -1,19 +1,20 @@
 import UserModel from '../models/users.model';
 import BadgeModel from '../models/badge.model';
-import { Badge, BadgeDescription, BadgeName } from '../types/types';
+import { Badge, BadgeNameType, BadgeDescriptionType } from '../types/types';
+import { BadgeName } from '../types/badgeConstants';
 
 /**
  * Checks the progress of a badge and then awards the badge if the progress is sufficient.
  * @param {string} username - The username of the user to check the badge for
- * @param {BadgeName} badgeName - The badge to check the progress for
- * @param {BadgeDescription} badgeDescription - The description of the badge
+ * @param {BadgeNameType} badgeName - The badge to check the progress for
+ * @param {BadgeDescriptionType} badgeDescription - The description of the badge
  * @param {number} progressIncrement - The amount to increment the progress by
  * @returns {Promise<Badge>} - The progress of the badge or if it was awarded successfully
  */
 export const awardBadge = async (
   username: string,
-  badgeName: BadgeName,
-  badgeDescription: BadgeDescription,
+  badgeName: BadgeNameType,
+  badgeDescription: BadgeDescriptionType,
   progressIncrement: number = 1,
 ): Promise<Badge> => {
   try {
@@ -75,15 +76,15 @@ export const awardBadge = async (
 /**
  * Creates a badge with certain name and description.
  * @param {string} username - The username of the user to create the badge for
- * @param {BadgeName} badgeName - The name of the badge to create
- * @param {BadgeDescription} badgeDescription - The description of the badge to create
+ * @param {BadgeNameType} badgeName - The name of the badge to create
+ * @param {BadgeDescriptionType} badgeDescription - The description of the badge to create
  * @returns {Promise<Badge>} - The created badge
  * @throws {Error} - If there is an error creating the badge
  */
 export const saveBadge = async (
   username: string,
-  badgeName: BadgeName,
-  badgeDescription: BadgeDescription,
+  badgeName: BadgeNameType,
+  badgeDescription: BadgeDescriptionType,
 ): Promise<Badge> => {
   try {
     const user = await UserModel.findOne({ username });
