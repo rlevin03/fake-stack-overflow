@@ -11,7 +11,7 @@ import {
   QuestionVoteRequest,
   Tag,
 } from '../types/types';
-import { BadgeDescription, BadgeName } from '../types/types';
+import { BadgeName, BadgeDescription } from '../types/badgeConstants';
 import {
   addVoteToQuestion,
   fetchAndIncrementQuestionViewsById,

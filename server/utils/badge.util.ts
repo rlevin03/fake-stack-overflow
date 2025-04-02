@@ -1,6 +1,6 @@
 import UserModel from '../models/users.model';
 import BadgeModel from '../models/badge.model';
-import { BadgeDescription, BadgeName } from '../types/types';
+import { BadgeNameType, BadgeDescriptionType } from '@fake-stack-overflow/shared';
 import { awardBadge, saveBadge } from '../services/badge.service';
 
 /**
@@ -12,8 +12,8 @@ import { awardBadge, saveBadge } from '../services/badge.service';
  */
 export async function awardingBadgeHelper(
   username: string,
-  badgeName: BadgeName,
-  badgeDescription: BadgeDescription,
+  badgeName: BadgeNameType,
+  badgeDescription: BadgeDescriptionType,
 ): Promise<void> {
   try {
     const user = await UserModel.findOne({ username });
