@@ -16,7 +16,7 @@ import {
   Tag,
 } from '../types/types';
 import { awardingBadgeHelper } from '../utils/badge.util';
-import { BadgeDescription, BadgeName } from '../types/types';
+import { BadgeName, BadgeDescription } from '../types/badgeConstants';
 
 const answerController = (socket: FakeSOSocket) => {
   const router = express.Router();
