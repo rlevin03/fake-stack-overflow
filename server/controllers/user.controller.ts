@@ -60,8 +60,8 @@ const userController = (socket: FakeSOSocket) => {
       biography: requestUser.biography ?? '',
       // initialize a 1000-point preference array
       preferences: new Array(1000).fill(0),
-      aiToggler: true,
       badges: [],
+      aiToggler: true,
     };
 
     try {
