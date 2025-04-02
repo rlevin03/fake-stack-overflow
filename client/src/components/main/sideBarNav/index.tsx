@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useContext, useState } from 'react';
 import './index.css';
 import { NavLink, useLocation } from 'react-router-dom';
+import UserContext from '../../../contexts/UserContext';
 
 /**
  * The SideBarNav component has four menu items: "Questions", "Tags", "Messaging", and "Users".
@@ -8,6 +9,7 @@ import { NavLink, useLocation } from 'react-router-dom';
  * triggers corresponding functions when the menu items are clicked.
  */
 const SideBarNav = () => {
+  const { user } = useContext(UserContext);
   const [showOptions, setShowOptions] = useState<boolean>(false);
   const location = useLocation();
 
@@ -64,6 +66,12 @@ const SideBarNav = () => {
         id='menu_games'
         className={({ isActive }) => `menu_button ${isActive ? 'menu_selected' : ''}`}>
         Games
+      </NavLink>
+      <NavLink
+        to={user && user.username ? `/${user.username}/sessions` : '/sessions'}
+        id='menu_collab'
+        className={({ isActive }) => `menu_button ${isActive ? 'menu_selected' : ''}`}>
+        Collaborate
       </NavLink>
     </div>
   );

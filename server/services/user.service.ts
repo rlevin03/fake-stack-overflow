@@ -50,6 +50,7 @@ export const saveUser = async (user: User): Promise<UserResponse> => {
       preferences: result.preferences,
       points: result.points,
       badges: result.badges,
+      aiToggler: result.aiToggler,
     };
     return safeUser;
   } catch (error: unknown) {
@@ -235,6 +236,7 @@ export const updateUserPreferences = async (
       preferences: user.preferences,
       points: user.points,
       badges: user.badges,
+      aiToggler: user.aiToggler,
     };
 
     return safeUser;

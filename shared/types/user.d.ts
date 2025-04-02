@@ -25,6 +25,7 @@ export interface User extends UserCredentials {
   badges: ObjectId[];
   biography?: string;
   preferences: number[];
+  aiToggler: boolean;
 }
 
 /**

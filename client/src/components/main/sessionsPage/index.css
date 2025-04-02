@@ -1,0 +1,108 @@
+/* src/components/collaborativeSession/index.css */
+
+/* Container for the entire collaborative session page */
+.collab-session-container {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 20px;
+    font-family: Arial, sans-serif;
+  }
+  
+  /* Main heading styling */
+  .collab-session-container h1 {
+    text-align: center;
+    margin-bottom: 30px;
+    font-size: 2rem;
+  }
+  
+  /* Section for session actions (create and join) */
+  .session-actions {
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    margin-bottom: 30px;
+  }
+  
+  /* Styling for create-session and join-session blocks */
+  .create-session,
+  .join-session {
+    flex: 1;
+    min-width: 300px;
+    margin: 10px;
+    padding: 20px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    background-color: #fafafa;
+  }
+  
+  /* Headings for action blocks */
+  .create-session h2,
+  .join-session h2 {
+    font-size: 1.2rem;
+    margin-bottom: 15px;
+  }
+  
+  /* Button styling */
+  .create-session button,
+  .join-session button,
+  .previous-sessions button {
+    background-color: #007bff;
+    color: #fff;
+    border: none;
+    border-radius: 3px;
+    padding: 10px 15px;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+  }
+  
+  .create-session button:disabled,
+  .join-session button:disabled {
+    background-color: #aaa;
+    cursor: not-allowed;
+  }
+  
+  .create-session button:hover:not(:disabled),
+  .join-session button:hover:not(:disabled),
+  .previous-sessions button:hover {
+    background-color: #0056b3;
+  }
+  
+  /* Input styling */
+  .join-session input {
+    width: calc(100% - 20px);
+    padding: 8px 10px;
+    margin-bottom: 10px;
+    border: 1px solid #ccc;
+    border-radius: 3px;
+  }
+  
+  /* Section for displaying previous sessions */
+  .previous-sessions {
+    margin-top: 20px;
+  }
+  
+  /* Unordered list styling for sessions */
+  .previous-sessions ul {
+    list-style-type: none;
+    padding: 0;
+  }
+  
+  .previous-sessions li {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 5px;
+    border-bottom: 1px solid #eee;
+  }
+  
+  .previous-sessions li:last-child {
+    border-bottom: none;
+  }
+  
+  /* Error message styling */
+  .error {
+    color: red;
+    font-weight: bold;
+    text-align: center;
+  }
+  

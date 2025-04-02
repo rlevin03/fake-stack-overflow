@@ -1,13 +1,11 @@
 // client/src/components/ProfileSettings/index.tsx
-import React, { useEffect, useState } from 'react';
+
+import React, { useEffect, useState, useRef } from 'react';
+import { io, Socket } from 'socket.io-client';
 import './index.css';
 import useProfileSettings from '../../hooks/useProfileSettings';
 import InterestsCard from './InterestsCard';
-import {
-  getTop10Leaderboard,
-  getUserRank,
-  LeaderboardUser,
-} from '../../services/leaderboardService';
+import { LeaderboardUser } from '../../services/leaderboardService';
 
 interface UserData {
   username: string;
@@ -39,47 +37,69 @@ const ProfileSettings: React.FC = () => {
     handleResetPassword,
     handleUpdateBiography,
     handleDeleteUser,
+    aiToggler,
+    handleToggleAIToggler,
   } = useProfileSettings();
 
   // Leaderboard state
   const [leaderboard, setLeaderboard] = useState<LeaderboardUser[]>([]);
   const [userRank, setUserRank] = useState<number | null>(null);
 
-  // Fetch the leaderboard once loading is finished,
-  // and fetch user rank only if userData is available.
+  // Create a socket ref to persist the socket connection.
+  const socketRef = useRef<Socket | null>(null);
+
+  // Initialize the socket connection when the component mounts.
   useEffect(() => {
-    if (!loading) {
-      const fetchData = async () => {
-        try {
-          const top10 = await getTop10Leaderboard();
+    socketRef.current = io('http://localhost:8000');
 
-          // Sort by points descending, just in case the backend isn't sorted
-          const sorted = [...top10].sort((a, b) => b.points - a.points);
-          setLeaderboard(sorted);
+    // Disconnect the socket when the component unmounts.
+    return () => {
+      socketRef.current?.disconnect();
+    };
+  }, []);
 
-          // If we have a user, also fetch their rank
-          if (userData?.username) {
-            const rank = await getUserRank(userData.username);
-            setUserRank(rank);
-          }
-        } catch (err) {
-          console.error('Error fetching leaderboard:', err);
-        }
-      };
-
-      fetchData();
+  /**
+   * Setup socket listeners once loading is done.
+   * We'll request the top 10 and user rank from the server,
+   * and handle real-time updates.
+   */
+  useEffect(() => {
+    if (loading) {
+      // Return an empty cleanup function if still loading.
+      return () => {};
     }
+
+    const socket = socketRef.current;
+    if (!socket) {
+      // Return an empty cleanup function if socket isn't available.
+      return () => {};
+    }
+
+    // Listen for server responses
+    socket.on('top10Response', (data: LeaderboardUser[]) => {
+      const sorted = [...data].sort((a, b) => b.points - a.points);
+      setLeaderboard(sorted);
+    });
+
+    socket.on('userRankResponse', (data: { rank: number }) => {
+      setUserRank(data.rank);
+    });
+
+    // Request data from the server
+    socket.emit('getTop10');
+    if (userData?.username) {
+      socket.emit('getUserRank', { username: userData.username });
+    }
+
+    // Return cleanup function to remove listeners on unmount.
+    return () => {
+      socket.off('top10Response');
+      socket.off('userRankResponse');
+    };
   }, [loading, userData]);
 
-  if (loading) {
-    return (
-      <div className='page-container'>
-        <div className='profile-card'>
-          <h2>Loading user data...</h2>
-        </div>
-      </div>
-    );
-  }
+  // Locate the current user entry in the leaderboard, if it exists.
+  const currentUserEntry = leaderboard.find(item => item.username === userData?.username);
 
   return (
     <div className='page-container' style={{ display: 'flex', gap: '2rem' }}>
@@ -141,6 +161,15 @@ const ProfileSettings: React.FC = () => {
               <strong>Date Joined:</strong>{' '}
               {userData.dateJoined ? new Date(userData.dateJoined).toLocaleDateString() : 'N/A'}
             </p>
+
+            {/* ----- AI Settings Section ----- */}
+            <div className='ai-settings'>
+              <h4>AI Settings</h4>
+              <label>
+                <input type='checkbox' checked={aiToggler} onChange={handleToggleAIToggler} />
+                Enable AI-Generated Answers
+              </label>
+            </div>
 
             {/* ---- Interests/Preferences Section ---- */}
             {canEditProfile && <InterestsCard />}
@@ -212,10 +241,7 @@ const ProfileSettings: React.FC = () => {
           <ol className='leaderboard-list'>
             {leaderboard.map(user => (
               <li key={user._id || user.username} className='leaderboard-item'>
-                <span
-                  className='leaderboard-username'
-                  style={{ fontWeight: 'normal' }} // override bold if needed
-                >
+                <span className='leaderboard-username' style={{ fontWeight: 'normal' }}>
                   {user.username}
                 </span>
                 <span className='leaderboard-points'>{user.points} pts</span>
@@ -227,9 +253,17 @@ const ProfileSettings: React.FC = () => {
         )}
 
         {userRank !== null && (
-          <p className='rank-info'>
-            Your overall rank: <strong>{userRank}</strong>
-          </p>
+          <div className='rank-info'>
+            <p>
+              Your overall rank: <strong>{userRank}</strong>
+            </p>
+            {currentUserEntry && (
+              <p>
+                <strong>{currentUserEntry.username}</strong> has{' '}
+                <strong>{currentUserEntry.points} pts</strong>
+              </p>
+            )}
+          </div>
         )}
       </div>
     </div>

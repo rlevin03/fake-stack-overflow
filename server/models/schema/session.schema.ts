@@ -14,6 +14,19 @@ const sessionSchema: Schema = new Schema(
       type: [String],
       default: [],
     },
+    createdBy: {
+      type: Schema.Types.ObjectId,
+      ref: 'User',
+      required: false,
+    },
+    createdAt: {
+      type: Date,
+      default: Date.now,
+    },
+    updatedAt: {
+      type: Date,
+      default: Date.now,
+    },
   },
   { collection: 'Session', timestamps: true },
 );

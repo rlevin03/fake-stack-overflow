@@ -1,15 +1,19 @@
+// server/services/question.service.ts
+
 import { ObjectId } from 'mongodb';
 import { QueryOptions } from 'mongoose';
 import {
   DatabaseComment,
   DatabaseQuestion,
   DatabaseTag,
+  // Keep OrderType if you use it elsewhere in your code:
   OrderType,
   PopulatedDatabaseAnswer,
   PopulatedDatabaseQuestion,
   Question,
   QuestionResponse,
   QuestionVoteResponse,
+  FakeSOSocket,
 } from '../types/types';
 import AnswerModel from '../models/answers.model';
 import QuestionModel from '../models/questions.model';
@@ -24,6 +28,9 @@ import {
   sortQuestionsByUnanswered,
 } from '../utils/sort.util';
 import UserModel from '../models/users.model';
+
+// NEW IMPORTS:
+import { getTop10ByPoints, getRankForUser } from './user.service';
 
 /**
  * Checks if keywords exist in a question's title or text.
@@ -42,12 +49,21 @@ const checkKeywordInQuestion = (q: Question, keywordlist: string[]): boolean => 
 
 /**
  * Retrieves questions ordered by specified criteria.
- * @param {OrderType} order - The order type to filter the questions
- * @returns {Promise<Question[]>} - The ordered list of questions
+ * Accepts a plain string, validates it, and defaults to 'mostViewed'.
+ * @param {string} orderParam - The order type (string) from the query
+ * @returns {Promise<PopulatedDatabaseQuestion[]>} - The ordered list of questions
  */
 export const getQuestionsByOrder = async (
-  order: OrderType,
+  orderParam: string,
 ): Promise<PopulatedDatabaseQuestion[]> => {
+  // Define valid orders (from your OrderType)
+  const validOrders: OrderType[] = ['active', 'unanswered', 'newest', 'mostViewed'];
+
+  // Validate or default to 'mostViewed'
+  const order: OrderType = validOrders.includes(orderParam as OrderType)
+    ? (orderParam as OrderType)
+    : 'mostViewed';
+
   try {
     const qlist: PopulatedDatabaseQuestion[] = await QuestionModel.find().populate<{
       tags: DatabaseTag[];
@@ -120,7 +136,7 @@ export const filterQuestionsBySearch = (
  * Fetches a question by ID and increments its view count.
  * @param {string} qid - The question ID
  * @param {string} username - The username requesting the question
- * @returns {Promise<QuestionResponse | null>} - The question with incremented views or error message
+ * @returns {Promise<QuestionResponse | { error: string }>} - The question with incremented views or error
  */
 export const fetchAndIncrementQuestionViewsById = async (
   qid: string,
@@ -152,35 +168,66 @@ export const fetchAndIncrementQuestionViewsById = async (
 };
 
 /**
- * Saves a new question to the database.
+ * Saves a new question to the database, awards points to the user,
+ * and emits updated leaderboard and user rank via Socket.IO.
+ *
  * @param {Question} question - The question to save
+ * @param {FakeSOSocket} socket - The socket instance for broadcasting updates
  * @returns {Promise<QuestionResponse>} - The saved question or error message
  */
-export const saveQuestion = async (question: Question): Promise<QuestionResponse> => {
+export const saveQuestion = async (
+  question: Question,
+  socket: FakeSOSocket,
+): Promise<QuestionResponse> => {
   try {
+    // 1) Create the question
     const result: DatabaseQuestion = await QuestionModel.create(question);
+
+    // 2) Award points: push the question ID and increment user points by 10
     await UserModel.updateOne(
       { username: question.askedBy },
       { $push: { questionsAsked: result._id }, $inc: { points: 10 } },
     );
 
+    // 3) Fetch the updated top 10
+    const top10 = await getTop10ByPoints();
+    if (Array.isArray(top10)) {
+      socket.emit('top10Response', top10);
+    } else {
+      console.error('Error fetching top 10:', top10.error);
+      // Optionally: socket.emit('error', top10.error);
+    }
+
+    // 4) Fetch updated user rank
+    const rankResult = await getRankForUser(question.askedBy);
+    if (!('error' in rankResult)) {
+      socket.emit('userRankResponse', { rank: rankResult.rank });
+    } else {
+      console.error('Error fetching user rank:', rankResult.error);
+      // Optionally: socket.emit('error', rankResult.error);
+    }
+
     return result;
-  } catch (error) {
+  } catch (error: unknown) {
     return { error: 'Error when saving a question' };
   }
 };
 
 /**
- * Adds a vote to a question.
+ * Adds a vote to a question, increments user points by 1,
+ * and broadcasts an updated top 10 leaderboard to all clients.
+ *
  * @param {string} qid - The question ID
  * @param {string} username - The username who voted
  * @param {'upvote' | 'downvote'} voteType - The vote type
+ * @param {FakeSOSocket} socket - The socket instance for broadcasting
  * @returns {Promise<QuestionVoteResponse>} - The updated vote result
  */
 export const addVoteToQuestion = async (
   qid: string,
   username: string,
   voteType: 'upvote' | 'downvote',
+  socket: FakeSOSocket,
 ): Promise<QuestionVoteResponse> => {
   let updateOperation: QueryOptions;
 
@@ -229,12 +276,18 @@ export const addVoteToQuestion = async (
   }
 
   try {
+    // 1) Update the question's upVotes/downVotes
     const result: DatabaseQuestion | null = await QuestionModel.findOneAndUpdate(
       { _id: qid },
       updateOperation,
       { new: true },
     );
 
+    if (!result) {
+      return { error: 'Question not found!' };
+    }
+
+    // 2) Increment user points by 1
     await UserModel.updateOne(
       { username },
       {
@@ -243,12 +296,17 @@ export const addVoteToQuestion = async (
       },
     );
 
-    if (!result) {
-      return { error: 'Question not found!' };
+    // 3) Fetch the updated top 10
+    const top10 = await getTop10ByPoints();
+    if (Array.isArray(top10)) {
+      socket.emit('top10Response', top10);
+    } else {
+      console.error('Error fetching top 10:', top10.error);
+      // Optionally: socket.emit('error', top10.error);
     }
 
+    // 4) Build response message
     let msg = '';
-
     if (voteType === 'upvote') {
       msg = result.upVotes.includes(username)
         ? 'Question upvoted successfully'
