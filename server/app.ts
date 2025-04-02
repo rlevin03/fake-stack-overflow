@@ -1,7 +1,5 @@
-// The server should run on localhost port 8000.
-// This is where you should start writing server-side code for this application.
-// startServer() is a function that starts the server
-// the server will listen on .env.CLIENT_URL if set, otherwise 8000
+// app.ts
+
 import dotenv from 'dotenv';
 import express, { Request, Response } from 'express';
 import mongoose from 'mongoose';
@@ -21,7 +19,6 @@ import gameController from './controllers/game.controller';
 import leaderboardController from './controllers/leaderboard.controller';
 import sessionController from './controllers/session.controller';
 
-
 dotenv.config();
 
 const MONGO_URL = `${process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017'}/fake_so`;
@@ -35,7 +32,7 @@ const socket: FakeSOSocket = new Server(server, {
 });
 
 function connectDatabase() {
-  return mongoose.connect(MONGO_URL).catch(err => console.log('MongoDB connection error: ', err));
+  return mongoose.connect(MONGO_URL).catch(err => console.log('MongoDB connection error:', err));
 }
 
 function startServer() {
@@ -45,7 +42,7 @@ function startServer() {
   });
 }
 
-socket.on('connection', socket => {
+socket.on('connection', (socket) => {
   console.log('A user connected ->', socket.id);
 
   socket.on('disconnect', () => {
@@ -56,7 +53,6 @@ socket.on('connection', socket => {
 process.on('SIGINT', async () => {
   await mongoose.disconnect();
   socket.close();
-
   server.close(() => {
     console.log('Server closed.');
     process.exit(0);
@@ -67,7 +63,7 @@ app.use(
   cors({
     credentials: true,
     origin: [CLIENT_URL],
-  }),
+  })
 );
 
 app.use(express.json());
@@ -88,5 +84,5 @@ app.use('/games', gameController(socket));
 app.use('/leaderboard', leaderboardController(socket));
 app.use('/sessions', sessionController(socket));
 
-// Export the app instance
+// Export the app instance, server, and startServer function
 export { app, server, startServer };

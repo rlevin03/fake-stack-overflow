@@ -1,4 +1,4 @@
-// leaderboard.controller.ts
+// server/src/controllers/leaderboard.controller.ts
 import express, { Request, Response } from 'express';
 import { FakeSOSocket } from '../types/types';
 import { getTop10ByPoints, getRankForUser } from '../services/user.service';
@@ -6,18 +6,18 @@ import { getTop10ByPoints, getRankForUser } from '../services/user.service';
 const leaderboardController = (socket: FakeSOSocket) => {
   const router = express.Router();
 
-  // Optional REST endpoint for top 10 leaderboard
+  // REST endpoint for top 10 leaderboard
   router.get('/top10', async (req: Request, res: Response) => {
     try {
       const top10 = await getTop10ByPoints();
       if ('error' in top10) throw new Error(top10.error);
       res.status(200).json(top10);
-    } catch (error) {
-      res.status(500).send(`Error when getting top 10: ${error}`);
+    } catch (error: any) {
+      res.status(500).send(`Error when getting top 10: ${error.message}`);
     }
   });
 
-  // Optional REST endpoint for user rank
+  // REST endpoint for user rank (expects ?username=... as query parameter)
   router.get('/user-rank', async (req: Request, res: Response) => {
     try {
       const { username } = req.query;
@@ -28,12 +28,12 @@ const leaderboardController = (socket: FakeSOSocket) => {
       const rankResult = await getRankForUser(username);
       if ('error' in rankResult) throw new Error(rankResult.error);
       res.status(200).json(rankResult);
-    } catch (error) {
-      res.status(500).send(`Error when getting user rank: ${error}`);
+    } catch (error: any) {
+      res.status(500).send(`Error when getting user rank: ${error.message}`);
     }
   });
 
-  // Set up WebSocket event handlers for leaderboard
+  // WebSocket event handlers for leaderboard
   socket.on('connection', (conn) => {
     console.log('Leaderboard WS connection:', conn.id);
 
@@ -42,10 +42,9 @@ const leaderboardController = (socket: FakeSOSocket) => {
       try {
         const top10 = await getTop10ByPoints();
         if ('error' in top10) throw new Error(top10.error);
-        // Emit the top10 leaderboard only to the requesting client
         conn.emit('top10Response', top10);
-      } catch (error) {
-        conn.emit('error', `Error when getting top 10: ${error}`);
+      } catch (error: any) {
+        conn.emit('error', `Error when getting top 10: ${error.message}`);
       }
     });
 
@@ -59,8 +58,8 @@ const leaderboardController = (socket: FakeSOSocket) => {
         const rankResult = await getRankForUser(data.username);
         if ('error' in rankResult) throw new Error(rankResult.error);
         conn.emit('userRankResponse', rankResult);
-      } catch (error) {
-        conn.emit('error', `Error when getting user rank: ${error}`);
+      } catch (error: any) {
+        conn.emit('error', `Error when getting user rank: ${error.message}`);
       }
     });
   });
