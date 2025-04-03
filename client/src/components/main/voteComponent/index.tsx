@@ -1,40 +1,52 @@
 import tagIndexMap from '@fake-stack-overflow/shared/tagIndexMap.json';
 import { downvoteQuestion, upvoteQuestion } from '../../../services/questionService';
+import { downvoteAnswer, upvoteAnswer } from '../../../services/answerService';
 import './index.css';
 import useUserContext from '../../../hooks/useUserContext';
-import { PopulatedDatabaseQuestion } from '../../../types/types';
+import { PopulatedDatabaseQuestion, PopulatedDatabaseAnswer } from '../../../types/types';
 import useVoteStatus from '../../../hooks/useVoteStatus';
 
 /**
  * Interface represents the props for the VoteComponent.
  *
- * question - The question object containing voting information.
+ * item - The question or answer object containing voting information.
+ * type - The type of item being voted on ('question' or 'answer')
  */
 interface VoteComponentProps {
-  question: PopulatedDatabaseQuestion;
+  item: PopulatedDatabaseQuestion | PopulatedDatabaseAnswer;
+  type: 'question' | 'answer';
 }
 
 /**
- * A Vote component that allows users to upvote or downvote a question.
+ * A Vote component that allows users to upvote or downvote a question or answer.
  *
- * @param question - The question object containing voting information.
+ * @param item - The question or answer object containing voting information.
+ * @param type - The type of item being voted on ('question' or 'answer')
  */
-const VoteComponent = ({ question }: VoteComponentProps) => {
+const VoteComponent = ({ item, type }: VoteComponentProps) => {
   const { user } = useUserContext();
-  const { count, voted } = useVoteStatus({ question });
+  const { count, voted } = useVoteStatus({ item, type });
 
   /**
-   * Function to handle upvoting or downvoting a question.
+   * Function to handle upvoting or downvoting an item.
    *
-   * @param type - The type of vote, either 'upvote' or 'downvote'.
+   * @param voteType - The type of vote, either 'upvote' or 'downvote'.
    */
-  const handleVote = async (type: string) => {
+  const handleVote = async (voteType: string) => {
     try {
-      if (question._id) {
-        if (type === 'upvote') {
-          await upvoteQuestion(question._id, user.username);
-        } else if (type === 'downvote') {
-          await downvoteQuestion(question._id, user.username);
+      if (item._id) {
+        if (type === 'question') {
+          if (voteType === 'upvote') {
+            await upvoteQuestion(item._id, user.username);
+          } else if (voteType === 'downvote') {
+            await downvoteQuestion(item._id, user.username);
+          }
+        } else {
+          if (voteType === 'upvote') {
+            await upvoteAnswer(item._id, user.username);
+          } else if (voteType === 'downvote') {
+            await downvoteAnswer(item._id, user.username);
+          }
         }
       }
     } catch (error) {

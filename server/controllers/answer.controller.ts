@@ -182,7 +182,7 @@ const answerController = (socket: FakeSOSocket) => {
       let status;
 
       if (type === 'upvote') {
-        status = await addVoteToAnswer(ansid, username, type);
+        status = await addVoteToAnswer(ansid, username, type, socket);
         await awardingBadgeHelper(
           username,
           BadgeName.RESPECTED_VOICE,
@@ -205,7 +205,7 @@ const answerController = (socket: FakeSOSocket) => {
           );
         }
       } else {
-        status = await addVoteToAnswer(ansid, username, type);
+        status = await addVoteToAnswer(ansid, username, type, socket);
       }
 
       if (status && 'error' in status) {

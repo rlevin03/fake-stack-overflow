@@ -22,7 +22,7 @@ const AnswerPage = () => {
 
   return (
     <>
-      <VoteComponent question={question} />
+      <VoteComponent item={question} type='question' />
       <AnswerHeader ansCount={question.answers.length} title={question.title} />
       <QuestionBody
         views={question.views.length}
@@ -44,6 +44,7 @@ const AnswerPage = () => {
           handleAddComment={(comment: Comment) =>
             handleNewComment(comment, 'answer', String(a._id))
           }
+          answer={a}
         />
       ))}
       <button

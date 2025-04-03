@@ -154,11 +154,12 @@ const useAnswerPage = () => {
     };
 
     /**
-     * Function to handle vote updates for a question.
+     * Function to handle vote updates for a question or answer.
      *
-     * @param voteData - The updated vote data for a question
+     * @param voteData - The updated vote data
      */
     const handleVoteUpdate = (voteData: VoteUpdatePayload) => {
+      // Update question votes if the vote is for the current question
       if (voteData.qid === questionID) {
         setQuestion(prevQuestion =>
           prevQuestion
@@ -170,6 +171,24 @@ const useAnswerPage = () => {
             : prevQuestion,
         );
       }
+
+      // Update answer votes if the vote is for any of the answers
+      setQuestion(prevQuestion =>
+        prevQuestion
+          ? {
+              ...prevQuestion,
+              answers: prevQuestion.answers.map(answer =>
+                answer._id.toString() === voteData.qid
+                  ? {
+                      ...answer,
+                      upVotes: [...voteData.upVotes],
+                      downVotes: [...voteData.downVotes],
+                    }
+                  : answer,
+              ),
+            }
+          : prevQuestion,
+      );
     };
 
     socket.on('answerUpdate', handleAnswerUpdate);
