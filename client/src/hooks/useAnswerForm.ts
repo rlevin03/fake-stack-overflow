@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { validateHyperlink } from '../tool';
-import addAnswer from '../services/answerService';
+import { addAnswer } from '../services/answerService';
 import useUserContext from './useUserContext';
 import { Answer } from '../types/types';
 
@@ -63,7 +63,7 @@ const useAnswerForm = () => {
       downVotes: [],
     };
 
-    const res = await addAnswer.addAnswer(questionID, answer);
+    const res = await addAnswer(questionID, answer);
 
     if (res && res._id) {
       // navigate to the question that was answered
