@@ -62,7 +62,6 @@ const userController = (socket: FakeSOSocket) => {
       preferences: new Array(1000).fill(0),
       badges: [],
       aiToggler: true,
-      badges: [],
     };
 
     try {
