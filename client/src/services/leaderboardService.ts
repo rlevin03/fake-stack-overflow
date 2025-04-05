@@ -16,14 +16,21 @@ export async function getTop10Leaderboard(): Promise<LeaderboardUser[]> {
   return new Promise((resolve, reject) => {
     // Emit the event to request top 10 leaderboard.
     socket.emit('getTop10');
-    // Listen for the response event (use 'once' so it only listens for a single response).
-    socket.once('top10Response', (data: LeaderboardUser[]) => {
+
+    // Response handler: Remove error listener and resolve.
+    const onResponse = (data: LeaderboardUser[]) => {
+      socket.off('error', onError);
       resolve(data);
-    });
-    // Listen for an error event.
-    socket.once('error', (msg: string) => {
+    };
+
+    // Error handler: Remove response listener and reject.
+    const onError = (msg: string) => {
+      socket.off('top10Response', onResponse);
       reject(new Error(msg));
-    });
+    };
+
+    socket.once('top10Response', onResponse);
+    socket.once('error', onError);
   });
 }
 
@@ -32,13 +39,20 @@ export async function getUserRank(username: string): Promise<number> {
   return new Promise((resolve, reject) => {
     // Emit the event with the username.
     socket.emit('getUserRank', { username });
-    // Listen for the rank response.
-    socket.once('userRankResponse', (data: { rank: number }) => {
+
+    // Response handler: Remove error listener and resolve.
+    const onResponse = (data: { rank: number }) => {
+      socket.off('error', onError);
       resolve(data.rank);
-    });
-    // Listen for an error event.
-    socket.once('error', (msg: string) => {
+    };
+
+    // Error handler: Remove response listener and reject.
+    const onError = (msg: string) => {
+      socket.off('userRankResponse', onResponse);
       reject(new Error(msg));
-    });
+    };
+
+    socket.once('userRankResponse', onResponse);
+    socket.once('error', onError);
   });
 }

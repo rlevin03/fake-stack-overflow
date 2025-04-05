@@ -19,6 +19,7 @@ import AllGamesPage from './main/games/allGamesPage';
 import GamePage from './main/games/gamePage';
 import InterestsSelection from './interestsSelection';
 import SessionsPage from './main/sessionsPage';
+import LeaderboardPage from './main/leaderboardPage'; // New import for Leaderboard
 
 const ProtectedRoute = ({
   user,
@@ -34,50 +35,45 @@ const ProtectedRoute = ({
   if (!user || !socket) {
     return <Navigate to='/' />;
   }
-
   return <UserContext.Provider value={{ user, socket, setUser }}>{children}</UserContext.Provider>;
 };
 
-/**
- * Represents the main component of the application.
- * It manages the state for search terms and the main title.
- */
 const FakeStackOverflow = ({ socket }: { socket: FakeSOSocket | null }) => {
   const [user, setUser] = useState<SafeDatabaseUser | null>(null);
 
   return (
     <LoginContext.Provider value={{ setUser }}>
       <Routes>
-        {/* Public Route */}
+        {/* Public Routes */}
         <Route path='/' element={<Login />} />
         <Route path='/signup' element={<Signup />} />
         {/* Protected Routes */}
-        {
+        <Route
+          element={
+            <ProtectedRoute user={user} socket={socket} setUser={setUser}>
+              <Layout />
+            </ProtectedRoute>
+          }>
+          <Route path='/home' element={<QuestionPage />} />
+          <Route path='tags' element={<TagPage />} />
+          <Route path='/messaging' element={<MessagingPage />} />
+          <Route path='/messaging/direct-message' element={<DirectMessage />} />
+          <Route path='/question/:qid' element={<AnswerPage />} />
+          <Route path='/new/question' element={<NewQuestionPage />} />
+          <Route path='/new/answer/:qid' element={<NewAnswerPage />} />
+          <Route path='/users' element={<UsersListPage />} />
+          <Route path='/user/:username' element={<ProfileSettings />} />
+          <Route path='/games' element={<AllGamesPage />} />
+          <Route path='/games/:gameID' element={<GamePage />} />
+          <Route path='/select-interests' element={<InterestsSelection />} />
+          <Route path='/:username/sessions' element={<SessionsPage />} />
           <Route
-            element={
-              <ProtectedRoute user={user} socket={socket} setUser={setUser}>
-                <Layout />
-              </ProtectedRoute>
-            }>
-            <Route path='/home' element={<QuestionPage />} />
-            <Route path='tags' element={<TagPage />} />
-            <Route path='/messaging' element={<MessagingPage />} />
-            <Route path='/messaging/direct-message' element={<DirectMessage />} />
-            <Route path='/question/:qid' element={<AnswerPage />} />
-            <Route path='/new/question' element={<NewQuestionPage />} />
-            <Route path='/new/answer/:qid' element={<NewAnswerPage />} />
-            <Route path='/users' element={<UsersListPage />} />
-            <Route path='/user/:username' element={<ProfileSettings />} />
-            <Route path='/games' element={<AllGamesPage />} />
-            <Route path='/games/:gameID' element={<GamePage />} />
-            <Route path='/select-interests' element={<InterestsSelection />} />
-            <Route path='/:username/sessions' element={<SessionsPage />} />
-            <Route
-              path='/:username/sessions/:codingSessionID'
-              element={<div>Collaborate with user</div>}
-            />
-          </Route>
-        }
+            path='/:username/sessions/:codingSessionID'
+            element={<div>Collaborate with user</div>}
+          />
+          {/* New Leaderboard Route */}
+          <Route path='/leaderboard' element={<LeaderboardPage />} />
+        </Route>
       </Routes>
     </LoginContext.Provider>
   );

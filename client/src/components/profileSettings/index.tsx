@@ -1,11 +1,9 @@
 // client/src/components/ProfileSettings/index.tsx
 
-import React, { useEffect, useState, useRef } from 'react';
-import { io, Socket } from 'socket.io-client';
+import React from 'react';
 import './index.css';
 import useProfileSettings from '../../hooks/useProfileSettings';
 import InterestsCard from './InterestsCard';
-import { LeaderboardUser } from '../../services/leaderboardService';
 
 interface UserData {
   username: string;
@@ -40,66 +38,6 @@ const ProfileSettings: React.FC = () => {
     aiToggler,
     handleToggleAIToggler,
   } = useProfileSettings();
-
-  // Leaderboard state
-  const [leaderboard, setLeaderboard] = useState<LeaderboardUser[]>([]);
-  const [userRank, setUserRank] = useState<number | null>(null);
-
-  // Create a socket ref to persist the socket connection.
-  const socketRef = useRef<Socket | null>(null);
-
-  // Initialize the socket connection when the component mounts.
-  useEffect(() => {
-    socketRef.current = io('http://localhost:8000');
-
-    // Disconnect the socket when the component unmounts.
-    return () => {
-      socketRef.current?.disconnect();
-    };
-  }, []);
-
-  /**
-   * Setup socket listeners once loading is done.
-   * We'll request the top 10 and user rank from the server,
-   * and handle real-time updates.
-   */
-  useEffect(() => {
-    if (loading) {
-      // Return an empty cleanup function if still loading.
-      return () => {};
-    }
-
-    const socket = socketRef.current;
-    if (!socket) {
-      // Return an empty cleanup function if socket isn't available.
-      return () => {};
-    }
-
-    // Listen for server responses
-    socket.on('top10Response', (data: LeaderboardUser[]) => {
-      const sorted = [...data].sort((a, b) => b.points - a.points);
-      setLeaderboard(sorted);
-    });
-
-    socket.on('userRankResponse', (data: { rank: number }) => {
-      setUserRank(data.rank);
-    });
-
-    // Request data from the server
-    socket.emit('getTop10');
-    if (userData?.username) {
-      socket.emit('getUserRank', { username: userData.username });
-    }
-
-    // Return cleanup function to remove listeners on unmount.
-    return () => {
-      socket.off('top10Response');
-      socket.off('userRankResponse');
-    };
-  }, [loading, userData]);
-
-  // Locate the current user entry in the leaderboard, if it exists.
-  const currentUserEntry = leaderboard.find(item => item.username === userData?.username);
 
   return (
     <div className='page-container' style={{ display: 'flex', gap: '2rem' }}>
@@ -230,39 +168,6 @@ const ProfileSettings: React.FC = () => {
                 Cancel
               </button>
             </div>
-          </div>
-        )}
-      </div>
-
-      {/* ---------------- LEADERBOARD CARD ---------------- */}
-      <div className='profile-card leaderboard-container'>
-        <h2>Leaderboard</h2>
-        {leaderboard.length > 0 ? (
-          <ol className='leaderboard-list'>
-            {leaderboard.map(user => (
-              <li key={user._id || user.username} className='leaderboard-item'>
-                <span className='leaderboard-username' style={{ fontWeight: 'normal' }}>
-                  {user.username}
-                </span>
-                <span className='leaderboard-points'>{user.points} pts</span>
-              </li>
-            ))}
-          </ol>
-        ) : (
-          <p>No leaderboard data.</p>
-        )}
-
-        {userRank !== null && (
-          <div className='rank-info'>
-            <p>
-              Your overall rank: <strong>{userRank}</strong>
-            </p>
-            {currentUserEntry && (
-              <p>
-                <strong>{currentUserEntry.username}</strong> has{' '}
-                <strong>{currentUserEntry.points} pts</strong>
-              </p>
-            )}
           </div>
         )}
       </div>
