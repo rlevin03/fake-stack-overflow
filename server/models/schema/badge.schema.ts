@@ -6,7 +6,7 @@ import { Schema } from 'mongoose';
  * This schema defines the structure for storing badges in the database.
  * Each badge includes the following fields:
  * - `progress`: The progress towards earning the badge.
- * - `attained`: A boolean indicating if the badge has been attaine
+ * - `attained`: A boolean indicating if the badge has been attained.
  * - `name`: The name of the badge.
  * - `description`: A brief description of the badge.
  */

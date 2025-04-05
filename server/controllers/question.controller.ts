@@ -315,12 +315,6 @@ const questionController = (socket: FakeSOSocket) => {
       }
       // --- End: Update the curious cat badge progress ---
 
-      // --- Begin: Update the curious cat badge progress ---
-      if (type === 'upvote' && status.upVotes.length === 1) {
-        await awardingBadgeHelper(username, BadgeName.CURIOUS_CAT, BadgeDescription.CURIOUS_CAT);
-      }
-      // --- End: Update the curious cat badge progress ---
-
       // Emit the updated vote counts to all connected clients
       socket.emit('voteUpdate', { qid, upVotes: status.upVotes, downVotes: status.downVotes });
       res.json(status);

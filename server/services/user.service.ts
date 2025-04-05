@@ -47,6 +47,7 @@ export const saveUser = async (user: User): Promise<UserResponse> => {
       biography: result.biography,
       preferences: result.preferences,
       points: result.points,
+      badges: result.badges,
       aiToggler: result.aiToggler,
       badges: result.badges,
     };
