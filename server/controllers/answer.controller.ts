@@ -119,25 +119,31 @@ const answerController = (socket: FakeSOSocket) => {
       // --- End: Update the helping hand badge progress ---
 
       //Begin: Update the lifelife badge progress
-      if (
-        question &&
-        question.askDateTime.getTime() - ansInfo.ansDateTime.getTime() > 24 * 60 * 60 * 1000
-      ) {
-        await awardingBadgeHelper(ansInfo.ansBy, BadgeName.LIFELINE, BadgeDescription.LIFELINE);
+      if (question) {
+        const questionDate = new Date(question.askDateTime);
+        const answerDate = new Date(ansInfo.ansDateTime);
+        const timeDiff = answerDate.getTime() - questionDate.getTime();
+
+        if (timeDiff > 24 * 60 * 60 * 1000) {
+          await awardingBadgeHelper(ansInfo.ansBy, BadgeName.LIFELINE, BadgeDescription.LIFELINE);
+        }
       }
 
       //End: Update the lifelife badge progress
 
       //Begin: Update the lightning responder badge progress
-      if (
-        question &&
-        ansInfo.ansDateTime.getTime() - question.askDateTime.getTime() < 5 * 60 * 1000
-      ) {
-        await awardingBadgeHelper(
-          ansInfo.ansBy,
-          BadgeName.LIGHTNING_RESPONDER,
-          BadgeDescription.LIGHTNING_RESPONDER,
-        );
+      if (question) {
+        const questionDate = new Date(question.askDateTime);
+        const answerDate = new Date(ansInfo.ansDateTime);
+        const timeDiff = answerDate.getTime() - questionDate.getTime();
+
+        if (timeDiff < 5 * 60 * 1000) {
+          await awardingBadgeHelper(
+            ansInfo.ansBy,
+            BadgeName.LIGHTNING_RESPONDER,
+            BadgeDescription.LIGHTNING_RESPONDER,
+          );
+        }
       }
       //End: Update the lightning responder badge progress
 
