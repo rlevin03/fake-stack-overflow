@@ -12,6 +12,8 @@ import {
 import AnswerModel from '../models/answers.model';
 import QuestionModel from '../models/questions.model';
 import UserModel from '../models/users.model';
+import { FakeSOSocket } from '../types/types';
+import { getTop10ByPoints } from './user.service';
 
 /**
  * Records the most recent answer time for a given question based on its answers.
@@ -80,17 +82,22 @@ export const addAnswerToQuestion = async (
     return { error: 'Error when adding answer to question' };
   }
 };
+
 /**
- * Adds a vote to a question.
- * @param {string} ansid - The question ID
+ * Adds a vote to an answer, increments user points by 1,
+ * and broadcasts an updated top 10 leaderboard to all clients.
+ *
+ * @param {string} ansid - The answer ID
  * @param {string} username - The username who voted
  * @param {'upvote' | 'downvote'} voteType - The vote type
+ * @param {FakeSOSocket} socket - The socket instance for broadcasting
  * @returns {Promise<AnswerVoteResponse>} - The updated vote result
  */
 export const addVoteToAnswer = async (
   ansid: string,
   username: string,
   voteType: 'upvote' | 'downvote',
+  socket: FakeSOSocket,
 ): Promise<AnswerVoteResponse> => {
   let updateOperation: QueryOptions;
 
@@ -139,33 +146,45 @@ export const addVoteToAnswer = async (
   }
 
   try {
+    // 1) Update the answer's upVotes/downVotes
     const result: DatabaseAnswer | null = await AnswerModel.findOneAndUpdate(
       { _id: ansid },
       updateOperation,
       { new: true },
     );
 
+    if (!result) {
+      return { error: 'Answer not found!' };
+    }
+
+    // 2) Increment user points by 1
     await UserModel.updateOne(
       { username },
       {
-        $push: { [voteType === 'upvote' ? 'questionsUpvoted' : 'questionsDownvoted']: ansid },
+        $push: { [voteType === 'upvote' ? 'answersUpvoted' : 'answersDownvoted']: ansid },
         $inc: { points: 1 },
       },
     );
 
-    if (!result) {
-      return { error: 'Question not found!' };
+    // 3) Fetch and broadcast the updated top 10 if socket is provided
+    if (socket) {
+      const top10 = await getTop10ByPoints();
+      if (Array.isArray(top10)) {
+        socket.emit('top10Response', top10);
+      } else {
+        console.error('Error fetching top 10:', top10.error);
+      }
     }
 
+    // 4) Build response message
     let msg = '';
-
     if (voteType === 'upvote') {
       msg = result.upVotes.includes(username)
-        ? 'Question upvoted successfully'
+        ? 'Answer upvoted successfully'
         : 'Upvote cancelled successfully';
     } else {
       msg = result.downVotes.includes(username)
-        ? 'Question downvoted successfully'
+        ? 'Answer downvoted successfully'
         : 'Downvote cancelled successfully';
     }
 
@@ -178,8 +197,8 @@ export const addVoteToAnswer = async (
     return {
       error:
         voteType === 'upvote'
-          ? 'Error when adding upvote to question'
-          : 'Error when adding downvote to question',
+          ? 'Error when adding upvote to answer'
+          : 'Error when adding downvote to answer',
     };
   }
 };

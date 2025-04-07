@@ -1,7 +1,3 @@
-// The server should run on localhost port 8000.
-// This is where you should start writing server-side code for this application.
-// startServer() is a function that starts the server
-// the server will listen on .env.CLIENT_URL if set, otherwise 8000
 import dotenv from 'dotenv';
 import express, { Request, Response } from 'express';
 import mongoose from 'mongoose';
@@ -20,7 +16,8 @@ import chatController from './controllers/chat.controller';
 import gameController from './controllers/game.controller';
 import leaderboardController from './controllers/leaderboard.controller';
 import sessionController from './controllers/session.controller';
-
+import badgeController from './controllers/badge.controller';
+import registerCollabHandlers from './controllers/collab.controller';
 
 dotenv.config();
 
@@ -34,8 +31,11 @@ const socket: FakeSOSocket = new Server(server, {
   cors: { origin: '*' },
 });
 
+// Call registerCollabHandlers to set up collaboration events
+registerCollabHandlers(socket);
+
 function connectDatabase() {
-  return mongoose.connect(MONGO_URL).catch(err => console.log('MongoDB connection error: ', err));
+  return mongoose.connect(MONGO_URL).catch(err => console.log('MongoDB connection error:', err));
 }
 
 function startServer() {
@@ -45,10 +45,11 @@ function startServer() {
   });
 }
 
-socket.on('connection', socket => {
-  console.log('A user connected ->', socket.id);
+socket.on('connection', (clientSocket) => {
+  console.log('A user connected ->', clientSocket.id);
 
-  socket.on('disconnect', () => {
+
+  clientSocket.on('disconnect', () => {
     console.log('User disconnected');
   });
 });
@@ -56,7 +57,6 @@ socket.on('connection', socket => {
 process.on('SIGINT', async () => {
   await mongoose.disconnect();
   socket.close();
-
   server.close(() => {
     console.log('Server closed.');
     process.exit(0);
@@ -87,6 +87,6 @@ app.use('/chat', chatController(socket));
 app.use('/games', gameController(socket));
 app.use('/leaderboard', leaderboardController(socket));
 app.use('/sessions', sessionController(socket));
+app.use('/badge', badgeController());
 
-// Export the app instance
 export { app, server, startServer };

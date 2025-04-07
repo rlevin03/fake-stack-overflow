@@ -4,9 +4,8 @@ import { NavLink, useLocation } from 'react-router-dom';
 import UserContext from '../../../contexts/UserContext';
 
 /**
- * The SideBarNav component has four menu items: "Questions", "Tags", "Messaging", and "Users".
- * It highlights the currently selected item based on the active page and
- * triggers corresponding functions when the menu items are clicked.
+ * The SideBarNav component has several menu items.
+ * It highlights the currently selected item based on the active page.
  */
 const SideBarNav = () => {
   const { user } = useContext(UserContext);
@@ -66,6 +65,13 @@ const SideBarNav = () => {
         id='menu_games'
         className={({ isActive }) => `menu_button ${isActive ? 'menu_selected' : ''}`}>
         Games
+      </NavLink>
+      {/* New Leaderboard Link */}
+      <NavLink
+        to='/leaderboard'
+        id='menu_leaderboard'
+        className={({ isActive }) => `menu_button ${isActive ? 'menu_selected' : ''}`}>
+        Leaderboard
       </NavLink>
       <NavLink
         to={user && user.username ? `/${user.username}/sessions` : '/sessions'}

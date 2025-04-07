@@ -20,6 +20,7 @@ import {
   getTop10ByPoints,
   getRankForUser,
 } from '../services/user.service';
+import { ObjectId } from 'mongodb';
 
 const userController = (socket: FakeSOSocket) => {
   const router: Router = express.Router();
@@ -59,6 +60,7 @@ const userController = (socket: FakeSOSocket) => {
       biography: requestUser.biography ?? '',
       // initialize a 1000-point preference array
       preferences: new Array(1000).fill(0),
+      badges: [],
       aiToggler: true,
     };
 

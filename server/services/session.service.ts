@@ -98,6 +98,7 @@ export const addVersionToSession = async (
     if (!session) return { error: 'Session not found' };
 
     session.versions.push(version);
+    session.updatedAt = new Date();
     await session.save();
     return session.toObject();
   } catch (error: unknown) {

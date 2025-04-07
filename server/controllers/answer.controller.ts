@@ -1,19 +1,22 @@
 import express, { Response } from 'express';
 import { ObjectId } from 'mongodb';
 import tagIndexMap from '@fake-stack-overflow/shared/tagIndexMap.json';
-import {
-  Answer,
-  AddAnswerRequest,
-  FakeSOSocket,
-  PopulatedDatabaseAnswer,
-  AnswerVoteRequest,
-  Tag,
-} from '../types/types';
 import { addAnswerToQuestion, addVoteToAnswer, saveAnswer } from '../services/answer.service';
 import { populateDocument } from '../utils/database.util';
 import QuestionModel from '../models/questions.model';
 import UserModel from '../models/users.model';
 import { updateUserPreferences } from '../services/user.service';
+import AnswerModel from '../models/answers.model';
+import {
+  AddAnswerRequest,
+  Answer,
+  AnswerVoteRequest,
+  FakeSOSocket,
+  PopulatedDatabaseAnswer,
+  Tag,
+} from '../types/types';
+import { awardingBadgeHelper } from '../utils/badge.util';
+import { BadgeName, BadgeDescription } from '../types/badgeConstants';
 
 const answerController = (socket: FakeSOSocket) => {
   const router = express.Router();
@@ -106,6 +109,44 @@ const answerController = (socket: FakeSOSocket) => {
       }
       // --- End: Update user preferences for answering ---
 
+      // --- Begin: Update the helping hand badge progress ---
+      await awardingBadgeHelper(
+        ansInfo.ansBy,
+        BadgeName.HELPING_HAND,
+        BadgeDescription.HELPING_HAND,
+      );
+
+      // --- End: Update the helping hand badge progress ---
+
+      //Begin: Update the lifelife badge progress
+      if (question) {
+        const questionDate = new Date(question.askDateTime);
+        const answerDate = new Date(ansInfo.ansDateTime);
+        const timeDiff = answerDate.getTime() - questionDate.getTime();
+
+        if (timeDiff > 24 * 60 * 60 * 1000) {
+          await awardingBadgeHelper(ansInfo.ansBy, BadgeName.LIFELINE, BadgeDescription.LIFELINE);
+        }
+      }
+
+      //End: Update the lifelife badge progress
+
+      //Begin: Update the lightning responder badge progress
+      if (question) {
+        const questionDate = new Date(question.askDateTime);
+        const answerDate = new Date(ansInfo.ansDateTime);
+        const timeDiff = answerDate.getTime() - questionDate.getTime();
+
+        if (timeDiff < 5 * 60 * 1000) {
+          await awardingBadgeHelper(
+            ansInfo.ansBy,
+            BadgeName.LIGHTNING_RESPONDER,
+            BadgeDescription.LIGHTNING_RESPONDER,
+          );
+        }
+      }
+      //End: Update the lightning responder badge progress
+
       // Populates the fields of the answer that was added and emits the new object
       socket.emit('answerUpdate', {
         qid: new ObjectId(qid),
@@ -142,9 +183,30 @@ const answerController = (socket: FakeSOSocket) => {
       let status;
 
       if (type === 'upvote') {
-        status = await addVoteToAnswer(ansid, username, type);
+        status = await addVoteToAnswer(ansid, username, type, socket);
+        await awardingBadgeHelper(
+          username,
+          BadgeName.RESPECTED_VOICE,
+          BadgeDescription.RESPECTED_VOICE,
+        );
+        const answer = await AnswerModel.findById(ansid);
+        if (!answer) {
+          throw new Error('Answer not found');
+        }
+        const user = await UserModel.findOne({ username });
+        if (!user) {
+          throw new Error('User not found');
+        }
+        // find the answer with 50 or more upvotes and award the badge
+        if ((answer?.upVotes?.length ?? 0) >= 50) {
+          await awardingBadgeHelper(
+            user.username,
+            BadgeName.PEOPLES_CHAMPION,
+            BadgeDescription.PEOPLES_CHAMPION,
+          );
+        }
       } else {
-        status = await addVoteToAnswer(ansid, username, type);
+        status = await addVoteToAnswer(ansid, username, type, socket);
       }
 
       if (status && 'error' in status) {

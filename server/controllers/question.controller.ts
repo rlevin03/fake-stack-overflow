@@ -11,6 +11,7 @@ import {
   QuestionVoteRequest,
   Tag,
 } from '../types/types';
+import { BadgeName, BadgeDescription } from '../types/badgeConstants';
 import {
   addVoteToQuestion,
   fetchAndIncrementQuestionViewsById,
@@ -26,6 +27,7 @@ import { getGeminiResponse, getGeminiAutoComplete } from '../services/gemini.ser
 import { saveAnswer, addAnswerToQuestion } from '../services/answer.service';
 import QuestionModel from '../models/questions.model';
 import UserModel from '../models/users.model';
+import { awardingBadgeHelper } from '../utils/badge.util';
 
 const questionController = (socket: FakeSOSocket) => {
   const router = express.Router();
@@ -276,6 +278,12 @@ const questionController = (socket: FakeSOSocket) => {
       if (userRecord) {
         await updateUserPreferences(userRecord._id.toString(), updates);
       }
+
+      // --- Begin: Update the curious cat badge progress ---
+      if (type === 'upvote' && status.upVotes.length === 1) {
+        await awardingBadgeHelper(username, BadgeName.CURIOUS_CAT, BadgeDescription.CURIOUS_CAT);
+      }
+      // --- End: Update the curious cat badge progress ---
 
       // Emit the updated vote counts to all connected clients
       socket.emit('voteUpdate', { qid, upVotes: status.upVotes, downVotes: status.downVotes });

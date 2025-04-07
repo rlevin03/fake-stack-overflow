@@ -19,6 +19,8 @@ import AllGamesPage from './main/games/allGamesPage';
 import GamePage from './main/games/gamePage';
 import InterestsSelection from './interestsSelection';
 import SessionsPage from './main/sessionsPage';
+import CollaborativeEditor from './main/collabEditor';
+import LeaderboardPage from './main/leaderboardPage'; // New import for Leaderboard
 
 const ProtectedRoute = ({
   user,
@@ -34,21 +36,16 @@ const ProtectedRoute = ({
   if (!user || !socket) {
     return <Navigate to='/' />;
   }
-
   return <UserContext.Provider value={{ user, socket, setUser }}>{children}</UserContext.Provider>;
 };
 
-/**
- * Represents the main component of the application.
- * It manages the state for search terms and the main title.
- */
 const FakeStackOverflow = ({ socket }: { socket: FakeSOSocket | null }) => {
   const [user, setUser] = useState<SafeDatabaseUser | null>(null);
 
   return (
     <LoginContext.Provider value={{ setUser }}>
       <Routes>
-        {/* Public Route */}
+        {/* Public Routes */}
         <Route path='/' element={<Login />} />
         <Route path='/signup' element={<Signup />} />
         {/* Protected Routes */}
@@ -72,10 +69,8 @@ const FakeStackOverflow = ({ socket }: { socket: FakeSOSocket | null }) => {
             <Route path='/games/:gameID' element={<GamePage />} />
             <Route path='/select-interests' element={<InterestsSelection />} />
             <Route path='/:username/sessions' element={<SessionsPage />} />
-            <Route
-              path='/:username/sessions/:codingSessionID'
-              element={<div>Collaborate with user</div>}
-            />
+            <Route path='/sessions/:codingSessionID' element={<CollaborativeEditor />} />
+            <Route path='/leaderboard' element={<LeaderboardPage />} />
           </Route>
         }
       </Routes>

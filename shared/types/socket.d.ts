@@ -1,103 +1,57 @@
+// server/types/types.d.ts
+
 import { PopulatedDatabaseAnswer } from './answer';
 import { PopulatedDatabaseChat } from './chat';
 import { DatabaseMessage } from './message';
 import { PopulatedDatabaseQuestion } from './question';
 import { SafeDatabaseUser } from './user';
 import { BaseMove, GameInstance, GameInstanceID, GameMove, GameState } from './game';
+import { Badge } from './badge';
 
-/**
- * Payload for an answer update event.
- * - `qid`: The unique identifier of the question.
- * - `answer`: The updated answer.
- */
 export interface AnswerUpdatePayload {
   qid: ObjectId;
   answer: PopulatedDatabaseAnswer;
 }
 
-/**
- * Payload for a game state update event.
- * - `gameInstance`: The updated instance of the game.
- */
 export interface GameUpdatePayload {
   gameInstance: GameInstance<GameState>;
 }
 
-/**
- * Payload for a game operation error event.
- * - `player`: The player ID who caused the error.
- * - `error`: The error message.
- */
 export interface GameErrorPayload {
   player: string;
   error: string;
 }
 
-/**
- * Payload for a vote update event.
- * - `qid`: The unique identifier of the question.
- * - `upVotes`: An array of usernames who upvoted the question.
- * - `downVotes`: An array of usernames who downvoted the question.
- */
 export interface VoteUpdatePayload {
   qid: string;
   upVotes: string[];
   downVotes: string[];
 }
 
-/**
- * Payload for a chat update event.
- * - `chat`: The updated chat object.
- * - `type`: The type of update (`'created'`, `'newMessage'`, or `'newParticipant'`).
- */
 export interface ChatUpdatePayload {
   chat: PopulatedDatabaseChat;
   type: 'created' | 'newMessage' | 'newParticipant';
 }
 
-/**
- * Payload for a comment update event.
- * - `result`: The updated question or answer.
- * - `type`: The type of the updated item (`'question'` or `'answer'`).
- */
 export interface CommentUpdatePayload {
   result: PopulatedDatabaseQuestion | PopulatedDatabaseAnswer;
   type: 'question' | 'answer';
 }
 
-/**
- * Payload for a message update event.
- * - `msg`: The updated message.
- */
 export interface MessageUpdatePayload {
   msg: DatabaseMessage;
 }
 
-/**
- * Payload for a user update event.
- * - `user`: The updated user object.
- * - `type`: The type of modification (`'created'`, `'deleted'`, or `'updated'`).
- */
 export interface UserUpdatePayload {
   user: SafeDatabaseUser;
   type: 'created' | 'deleted' | 'updated';
 }
 
-/**
- * Interface representing the payload for a game move operation, which contains:
- * - `gameID`: The ID of the game being played.
- * - `move`: The move being made in the game, defined by `GameMove`.
- */
 export interface GameMovePayload {
   gameID: GameInstanceID;
   move: GameMove<BaseMove>;
 }
 
-/**
- * Payload for a session update event.
- * - `session`: The updated session document.
- * - `type`: The type of update ('created' or 'updated').
- */
 export interface SessionUpdatePayload {
   session: {
     _id: ObjectId;
@@ -109,14 +63,8 @@ export interface SessionUpdatePayload {
   type: 'created' | 'updated';
 }
 
-/**
- * Interface representing the events the client can emit to the server.
- * - `makeMove`: Client can emit a move in the game.
- * - `joinGame`: Client can join a game.
- * - `leaveGame`: Client can leave a game.
- * - `joinChat`: Client can join a chat.
- * - `leaveChat`: Client can leave a chat.
- */
+// Extend your existing events by adding collaborative events:
+
 export interface ClientToServerEvents {
   makeMove: (move: GameMovePayload) => void;
   joinGame: (gameID: string) => void;
@@ -125,21 +73,26 @@ export interface ClientToServerEvents {
   leaveChat: (chatID: string | undefined) => void;
   getTop10: () => void;
   getUserRank: (data: { username: string }) => void;
+
+  // -- Collaborative Editor events --
+  joinSession: (sessionId: string, username: string) => void;
+  codeChange: (data: { codingSessionID: string; code: string; username: string }) => void;
+  executeCode: (data: { codingSessionID: string; code: string; username: string }) => void;
+  leaveSession: (sessionId: string, username: string) => void;
+  cursorChange: (data: {
+    codingSessionID: string;
+    cursorPosition: { lineNumber: number; column: number };
+    username: string;
+  }) => void;
+  editHighlight: (data: {
+    codingSessionID: string;
+    lineNumber: number;
+    editorId: string;
+    timestamp: number;
+  }) => void;
+  editorError: (data: { codingSessionID: string; errorMessage: string }) => void;
 }
 
-/**
- * Interface representing the events the server can emit to the client.
- * - `questionUpdate`: Server sends updated question.
- * - `answerUpdate`: Server sends updated answer.
- * - `viewsUpdate`: Server sends updated views count for a question.
- * - `voteUpdate`: Server sends updated votes for a question.
- * - `commentUpdate`: Server sends updated comment for a question or answer.
- * - `messageUpdate`: Server sends updated message.
- * - `userUpdate`: Server sends updated user status.
- * - `gameUpdate`: Server sends updated game state.
- * - `gameError`: Server sends error message related to game operation.
- * - `chatUpdate`: Server sends updated chat.
- */
 export interface ServerToClientEvents {
   questionUpdate: (question: PopulatedDatabaseQuestion) => void;
   answerUpdate: (result: AnswerUpdatePayload) => void;
@@ -156,5 +109,21 @@ export interface ServerToClientEvents {
   // --- NEW EVENTS FOR LEADERBOARD ---
   userRankResponse: (payload: { rank: number }) => void;
   top10Response: (payload: { username: string; points: number }[]) => void;
+  badgesResponse: (badges: Badge[]) => void;
   error: (msg: string) => void;
+
+  // -- Collaborative Editor events --
+  userJoined: (username: string) => void;
+  codeUpdate: (code: string) => void;
+  executionResult: (result: string) => void;
+  userLeft: (username: string) => void;
+  cursorChanged: (data: {
+    username: string;
+    cursorPosition: {
+      lineNumber: number;
+      column: number;
+    };
+  }) => void;
+  editHighlight: (data: { lineNumber: number; editorId: string; timestamp: number }) => void;
+  editorError: (errorMessage: string) => void;
 }

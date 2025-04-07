@@ -52,4 +52,4 @@ const downvoteAnswer = async (ansid: ObjectId, username: string): Promise<Answer
   }
   return res.data;
 };
-export default { addAnswer, upvoteAnswer, downvoteAnswer };
+export { addAnswer, upvoteAnswer, downvoteAnswer };

@@ -3,7 +3,7 @@ import { useEffect, useState, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import io, { Socket } from 'socket.io-client';
 import { validateHyperlink } from '../tool';
-import addAnswer from '../services/answerService';
+import { addAnswer } from '../services/answerService';
 import useUserContext from './useUserContext';
 import { Answer } from '../types/types';
 
@@ -101,6 +101,7 @@ const useAnswerForm = () => {
     };
 
     const res = await addAnswer.addAnswer(questionID, answer);
+
     if (res && res._id) {
       navigate(`/question/${questionID}`);
     }
