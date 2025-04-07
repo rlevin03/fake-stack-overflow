@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import io, { Socket } from 'socket.io-client';
 import { validateHyperlink } from '../tool';
 import { addQuestion } from '../services/questionService';
 import useUserContext from './useUserContext';
@@ -27,6 +28,80 @@ const useNewQuestion = () => {
   const [titleErr, setTitleErr] = useState<string>('');
   const [textErr, setTextErr] = useState<string>('');
   const [tagErr, setTagErr] = useState<string>('');
+
+  // Autocomplete suggestion states for title and text
+  const [titleSuggestion, setTitleSuggestion] = useState<string>('');
+  const [textSuggestion, setTextSuggestion] = useState<string>('');
+
+  const socketRef = useRef<Socket | null>(null);
+  const titleDebounce = useRef<NodeJS.Timeout | null>(null);
+  const textDebounce = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    socketRef.current = io(process.env.REACT_APP_SERVER_URL || 'http://localhost:8000');
+    const socket = socketRef.current;
+    socket.on('aiAutoCompleteResponse', (suggestion: string) => {
+      setTitleSuggestion(suggestion);
+    });
+    socket.on('aiAutoCompleteResponseText', (suggestion: string) => {
+      setTextSuggestion(suggestion);
+    });
+    return () => {
+      socket.off('aiAutoCompleteResponse');
+      socket.off('aiAutoCompleteResponseText');
+      socket.disconnect();
+    };
+  }, []);
+
+  // Debounce for title field
+  useEffect(() => {
+    if (titleDebounce.current) clearTimeout(titleDebounce.current);
+    if (title.trim() === '') {
+      setTitleSuggestion('');
+      return;
+    }
+    titleDebounce.current = setTimeout(() => {
+      socketRef.current?.emit('aiAutoComplete', { field: 'title', text: title });
+    }, 4000);
+    // eslint-disable-next-line consistent-return
+    return () => {
+      if (titleDebounce.current) clearTimeout(titleDebounce.current);
+    };
+  }, [title]);
+
+  // Debounce for text field
+  useEffect(() => {
+    if (textDebounce.current) clearTimeout(textDebounce.current);
+    if (text.trim() === '') {
+      setTextSuggestion('');
+      return;
+    }
+    textDebounce.current = setTimeout(() => {
+      socketRef.current?.emit('aiAutoComplete', { field: 'text', text });
+    }, 4000);
+    // eslint-disable-next-line consistent-return
+    return () => {
+      if (textDebounce.current) clearTimeout(textDebounce.current);
+    };
+  }, [text]);
+
+  // KeyDown for title: if Tab is pressed, accept suggestion
+  const handleTitleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>): void => {
+    if (e.key === 'Tab' && titleSuggestion) {
+      e.preventDefault();
+      setTitle(prev => prev + titleSuggestion);
+      setTitleSuggestion('');
+    }
+  };
+
+  // KeyDown for text: if Tab is pressed, accept suggestion
+  const handleTextKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>): void => {
+    if (e.key === 'Tab' && textSuggestion) {
+      e.preventDefault();
+      setText(prev => prev + textSuggestion);
+      setTextSuggestion('');
+    }
+  };
 
   /**
    * Validates the form before submitting the question.
@@ -112,6 +187,10 @@ const useNewQuestion = () => {
     textErr,
     tagErr,
     postQuestion,
+    titleSuggestion,
+    textSuggestion,
+    handleTitleKeyDown,
+    handleTextKeyDown,
   };
 };
 

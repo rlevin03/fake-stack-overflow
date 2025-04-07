@@ -1,14 +1,13 @@
 import React from 'react';
 import useNewQuestion from '../../../hooks/useNewQuestion';
-import useProfileSettings from '../../../hooks/useProfileSettings'; // <-- Import the same hook
+import useProfileSettings from '../../../hooks/useProfileSettings'; // reuse AI toggle from profile settings
 import Form from '../baseComponents/form';
-import Input from '../baseComponents/input';
-import TextArea from '../baseComponents/textarea';
+import AutocompleteInput from '../baseComponents/autocompleteInput';
+import AutocompleteTextArea from '../baseComponents/autocompleteTextArea';
 import TagSelector from '../../common/TagSelector';
 import './index.css';
 
 const NewQuestionPage = () => {
-  // Existing logic for new question
   const {
     title,
     setTitle,
@@ -20,28 +19,35 @@ const NewQuestionPage = () => {
     textErr,
     tagErr,
     postQuestion,
+    titleSuggestion,
+    textSuggestion,
+    handleTitleKeyDown,
+    handleTextKeyDown,
   } = useNewQuestion();
 
-  // Reuse the same AI toggle from profile settings
   const { aiToggler, handleToggleAIToggler } = useProfileSettings();
 
   return (
     <Form>
-      <Input
+      <AutocompleteInput
         title='Question Title'
         hint='Limit title to 100 characters or less'
         id='formTitleInput'
-        val={title}
-        setState={setTitle}
-        err={titleErr}
+        value={title}
+        onChange={setTitle}
+        error={titleErr}
+        onKeyDown={handleTitleKeyDown}
+        suggestion={titleSuggestion}
       />
-      <TextArea
+      <AutocompleteTextArea
         title='Question Text'
         hint='Add details'
         id='formTextInput'
-        val={text}
-        setState={setText}
-        err={textErr}
+        value={text}
+        onChange={setText}
+        error={textErr}
+        onKeyDown={handleTextKeyDown}
+        suggestion={textSuggestion}
       />
       <div className='tag-selector-container'>
         <label className='tag-selector-label'>Tags</label>
@@ -49,7 +55,7 @@ const NewQuestionPage = () => {
         {tagErr && <div className='error'>{tagErr}</div>}
       </div>
 
-      {/* NEW: The same AI toggle from profile settings */}
+      {/* Use the same AI toggle from profile settings */}
       <div className='ai-toggle-container' style={{ marginTop: '1rem' }}>
         <label>
           <input type='checkbox' checked={aiToggler} onChange={handleToggleAIToggler} />

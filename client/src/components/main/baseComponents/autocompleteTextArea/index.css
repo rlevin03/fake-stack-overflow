@@ -1,0 +1,47 @@
+.autocomplete-textarea-container {
+    width: 100%;
+    margin-bottom: 1rem;
+  }
+  
+  .textarea-wrapper {
+    position: relative;
+    width: 100%;
+  }
+  
+  .mirror {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    color: black; /* Text color for the typed content */
+    pointer-events: none;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    font-family: inherit;
+    font-size: inherit;
+    line-height: inherit;
+    padding: 0.5rem;
+    z-index: 0;
+  }
+  
+  .input_input {
+    position: relative;
+    background: transparent;
+    color: transparent;    /* Make the typed text invisible */
+    caret-color: black;    /* But keep the caret visible */
+    width: 100%;
+    z-index: 1;
+    border: 1px solid #ccc;
+    padding: 0.5rem;
+    font-family: inherit;
+    font-size: inherit;
+    line-height: inherit;
+    resize: vertical;
+  }
+  
+  .suggestion {
+    color: rgba(0, 0, 0, 0.5);
+    font-style: italic;
+    font-weight: bold;
+  }
+  
