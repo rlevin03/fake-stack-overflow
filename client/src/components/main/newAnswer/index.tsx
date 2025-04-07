@@ -1,23 +1,22 @@
 import './index.css';
 import React from 'react';
 import Form from '../baseComponents/form';
-import TextArea from '../baseComponents/textarea';
+import AutocompleteTextArea from '../baseComponents/autocompleteTextArea';
 import useAnswerForm from '../../../hooks/useAnswerForm';
 
-/**
- * NewAnswerPage component allows users to submit an answer to a specific question.
- */
 const NewAnswerPage = () => {
-  const { text, textErr, setText, postAnswer } = useAnswerForm();
+  const { text, textErr, setText, postAnswer, aiSuggestion, handleKeyDown } = useAnswerForm();
 
   return (
     <Form>
-      <TextArea
-        title={'Answer Text'}
-        id={'answerTextInput'}
-        val={text}
-        setState={setText}
-        err={textErr}
+      <AutocompleteTextArea
+        title='Answer Text'
+        id='answerTextInput'
+        value={text}
+        onChange={setText}
+        error={textErr}
+        onKeyDown={handleKeyDown}
+        suggestion={aiSuggestion}
       />
       <div className='btn_indicator_container'>
         <button className='form_postBtn' onClick={postAnswer}>

@@ -20,6 +20,7 @@ interface TextAreaProps {
   val: string;
   setState: (value: string) => void;
   err?: string;
+  onKeyDown?: React.KeyboardEventHandler<HTMLTextAreaElement>;
 }
 
 /**
@@ -33,8 +34,18 @@ interface TextAreaProps {
  * @param val - The current value of the textarea.
  * @param setState - The function to update the state of the textarea value.
  * @param err - Optional error message displayed when there's an issue with input.
+ * @param onKeyDown - Optional function to handle keydown events.
  */
-const TextArea = ({ title, mandatory = true, hint, id, val, setState, err }: TextAreaProps) => (
+const TextArea = ({
+  title,
+  mandatory = true,
+  hint,
+  id,
+  val,
+  setState,
+  err,
+  onKeyDown,
+}: TextAreaProps) => (
   <>
     <div className='input_title'>
       {title}
@@ -45,9 +56,8 @@ const TextArea = ({ title, mandatory = true, hint, id, val, setState, err }: Tex
       id={id}
       className='input_input'
       value={val}
-      onChange={e => {
-        setState(e.currentTarget.value);
-      }}
+      onChange={e => setState(e.currentTarget.value)}
+      onKeyDown={onKeyDown}
     />
     {err && <div className='input_error'>{err}</div>}
   </>

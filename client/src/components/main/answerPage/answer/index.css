@@ -16,3 +16,17 @@
 .answer_author {
   color: green;
 }
+
+/* Styling for AI answers */
+.ai-answer {
+  background-color: rgba(173, 216, 230, 0.3); /* LightBlue with transparency */
+  border-radius: 8px;
+  padding: 12px;
+  margin-top: 10px;
+}
+
+.ai-label {
+  margin-bottom: 6px;
+  font-size: 0.95rem;
+  color: #004b6b;
+}

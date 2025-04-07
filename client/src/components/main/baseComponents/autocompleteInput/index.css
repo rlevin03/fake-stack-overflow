@@ -1,0 +1,46 @@
+.autocomplete-input-container {
+    width: 100%;
+    margin-bottom: 1rem;
+  }
+  
+  .input-wrapper {
+    position: relative;
+    width: 100%;
+  }
+  
+  .mirror {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    color: black;
+    pointer-events: none;
+    white-space: pre;
+    font-family: inherit;
+    font-size: inherit;
+    line-height: inherit;
+    padding: 0.5rem;
+    z-index: 0;
+  }
+  
+  .input_input {
+    position: relative;
+    background: transparent;
+    /* Hide the text in the input so that the mirror shows it */
+    color: transparent;
+    caret-color: black;
+    width: 100%;
+    z-index: 1;
+    border: 1px solid #ccc;
+    padding: 0.5rem;
+    font-family: inherit;
+    font-size: inherit;
+    line-height: inherit;
+  }
+  
+  .suggestion {
+    color: rgba(0, 0, 0, 0.5);
+    font-style: italic;
+    font-weight: bold;
+  }
+  
