@@ -30,9 +30,9 @@ const BadgeComponent: React.FC<BadgeComponentProps> = ({ badgeIds }) => {
         const fetchedBadges = await getBadges(badgeIds);
         console.log('Fetched badges:', fetchedBadges);
         setBadges(fetchedBadges);
-      } catch (error) {
-        console.error('Error fetching badges:', error);
-        setError(`Error fetching badges: ${error}`);
+      } catch (error2) {
+        console.error('Error fetching badges:', error2);
+        setError(`Error fetching badges: ${error2}`);
       }
     };
 
