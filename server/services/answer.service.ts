@@ -8,11 +8,11 @@ import {
   PopulatedDatabaseAnswer,
   PopulatedDatabaseQuestion,
   QuestionResponse,
+  FakeSOSocket,
 } from '../types/types';
 import AnswerModel from '../models/answers.model';
 import QuestionModel from '../models/questions.model';
 import UserModel from '../models/users.model';
-import { FakeSOSocket } from '../types/types';
 import { getTop10ByPoints } from './user.service';
 
 /**
