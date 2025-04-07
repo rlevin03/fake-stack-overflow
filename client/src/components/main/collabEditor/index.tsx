@@ -44,25 +44,6 @@ const handleError = (
   }
 };
 
-// Type-safe throttle function that preserves parameter types
-const throttle = <Args extends unknown[], R>(
-  func: (...args: Args) => R,
-  delay: number,
-): ((...args: Args) => R | undefined) => {
-  let lastCall = 0;
-
-  return (...args: Args): R | undefined => {
-    const now = new Date().getTime();
-
-    if (now - lastCall >= delay) {
-      lastCall = now;
-      return func(...args);
-    }
-
-    return undefined;
-  };
-};
-
 const CollaborativeEditor: React.FC = () => {
   const { codingSessionID } = useParams();
   const { user } = useContext(UserContext);
@@ -115,30 +96,6 @@ const CollaborativeEditor: React.FC = () => {
   const handleThemeToggle = () => {
     setIsDarkTheme(prev => !prev);
   };
-
-  // Define the save function with proper types
-  const saveVersionFunction = async (sessionId: string, currentCode: string): Promise<void> => {
-    try {
-      const response = await fetch(
-        `${process.env.REACT_APP_SERVER_URL}/sessions/${sessionId}/versions`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ code: currentCode }),
-        },
-      );
-      if (!response.ok) {
-        showErrorNotification('Failed to save code version');
-      }
-    } catch (error) {
-      handleError(error, showErrorNotification, 'Error saving code version');
-    }
-  };
-
-  // Function to save the code version - throttled to every 5 seconds
-  const saveCodeVersion = useRef(throttle(saveVersionFunction, 5000)).current;
 
   // Fetch session data when component mounts
   useEffect(() => {
@@ -337,13 +294,6 @@ const CollaborativeEditor: React.FC = () => {
     };
   }, [codingSessionID, username]);
 
-  // Handle code changes and save versions
-  useEffect(() => {
-    if (code && code !== '# Start coding here...' && codingSessionID && !isLoading) {
-      saveCodeVersion(codingSessionID, code);
-    }
-  }, [code, codingSessionID, saveCodeVersion, isLoading]);
-
   // Handle code changes.
   const handleEditorChange = (value: string | undefined) => {
     if (value !== undefined && codingSessionID) {
@@ -371,6 +321,7 @@ const CollaborativeEditor: React.FC = () => {
 
       setCode(value);
       socket.emit('codeChange', { codingSessionID, code: value, username });
+      // No need for separate REST API call since socket.io is handling saving
     }
   };
 
