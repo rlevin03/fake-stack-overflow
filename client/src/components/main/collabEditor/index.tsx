@@ -2,8 +2,6 @@ import React, { useContext, useEffect, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import MonacoEditor, { OnMount } from '@monaco-editor/react';
 import io from 'socket.io-client';
-import prettier from 'prettier/standalone';
-import babelPlugin from 'prettier/plugins/babel';
 import * as monaco from 'monaco-editor';
 import UserContext from '../../../contexts/UserContext';
 import { getSessionByIdAPI } from '../../../services/sessionService';
@@ -333,13 +331,47 @@ const CollaborativeEditor: React.FC = () => {
 
   const formatCode = async () => {
     try {
-      const formatted = prettier.format(code, {
-        parser: 'babel',
-        plugins: [babelPlugin],
-      });
-      setCode(await formatted);
-      if (codingSessionID) {
-        socket.emit('codeChange', { codingSessionID, code: formatted, username });
+      // Simple formatting: standardize spacing and remove excessive blank lines
+      if (code.trim()) {
+        // Split into lines
+        const lines = code.split('\n');
+
+        // Remove excessive blank lines (more than 2 consecutive blank lines)
+        const formattedLines = [];
+        let blankLineCount = 0;
+
+        for (let i = 0; i < lines.length; i++) {
+          const line = lines[i].trimRight(); // Remove trailing whitespace
+
+          if (line.trim() === '') {
+            blankLineCount++;
+            // Only keep up to 2 consecutive blank lines
+            if (blankLineCount <= 2) {
+              formattedLines.push('');
+            }
+          } else {
+            blankLineCount = 0;
+
+            // Standardize spacing around operators
+            const formattedLine = line
+              // Add space after commas if not already there
+              .replace(/,(?!\s)/g, ', ')
+              // Add spaces around operators
+              .replace(/([+\-*/%=<>!&|^])([\w\d(])/g, '$1 $2')
+              .replace(/([\w\d)])([-+*/%=<>!&|^])/g, '$1 $2')
+              // Preserve indentation
+              .replace(/^\s*/, match => match);
+
+            formattedLines.push(formattedLine);
+          }
+        }
+
+        const formattedCode = formattedLines.join('\n');
+        setCode(formattedCode);
+
+        if (codingSessionID) {
+          socket.emit('codeChange', { codingSessionID, code: formattedCode, username });
+        }
       }
     } catch (error) {
       handleError(error, showErrorNotification, 'Formatting failed');
