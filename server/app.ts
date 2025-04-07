@@ -1,5 +1,3 @@
-// app.ts
-
 import dotenv from 'dotenv';
 import express, { Request, Response } from 'express';
 import mongoose from 'mongoose';
@@ -19,6 +17,8 @@ import gameController from './controllers/game.controller';
 import leaderboardController from './controllers/leaderboard.controller';
 import sessionController from './controllers/session.controller';
 import badgeController from './controllers/badge.controller';
+import registerCollabHandlers from './controllers/collab.controller';
+
 dotenv.config();
 
 const MONGO_URL = `${process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017'}/fake_so`;
@@ -31,6 +31,9 @@ const socket: FakeSOSocket = new Server(server, {
   cors: { origin: '*' },
 });
 
+// Call registerCollabHandlers to set up collaboration events
+registerCollabHandlers(socket);
+
 function connectDatabase() {
   return mongoose.connect(MONGO_URL).catch(err => console.log('MongoDB connection error:', err));
 }
@@ -42,10 +45,11 @@ function startServer() {
   });
 }
 
-socket.on('connection', socket => {
-  console.log('A user connected ->', socket.id);
+socket.on('connection', (clientSocket) => {
+  console.log('A user connected ->', clientSocket.id);
 
-  socket.on('disconnect', () => {
+
+  clientSocket.on('disconnect', () => {
     console.log('User disconnected');
   });
 });
@@ -85,5 +89,4 @@ app.use('/leaderboard', leaderboardController(socket));
 app.use('/sessions', sessionController(socket));
 app.use('/badge', badgeController());
 
-// Export the app instance, server, and startServer function
 export { app, server, startServer };
