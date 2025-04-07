@@ -1,0 +1,57 @@
+/* Leaderboard container styled like a card */
+.leaderboard-container {
+  width: 100%;
+  max-width: 600px; /* Limit the width similar to .profile-card */
+  background: #fff;
+  border-radius: 5px;
+  padding: 30px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  box-sizing: border-box;
+  margin: 40px auto; /* Center the card and add top/bottom spacing */
+}
+
+/* Heading style matching your profile card */
+.leaderboard-container h1 {
+  margin-bottom: 20px;
+  font-size: 26px;
+  font-weight: bold;
+  color: #333;
+  text-align: left;
+}
+
+/* Leaderboard list styles */
+.leaderboard-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  border-top: 1px solid #ccc;
+}
+
+/* Each leaderboard item */
+.leaderboard-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px;
+  border-bottom: 1px solid #eee;
+}
+
+/* Username styling */
+.leaderboard-username {
+  font-size: 15px;
+  color: #666;
+}
+
+/* Points styling */
+.leaderboard-points {
+  font-weight: bold;
+  color: #333;
+}
+
+/* Rank information styling */
+.rank-info {
+  margin-top: 20px;
+  text-align: center;
+  font-size: 15px;
+  color: #555;
+}

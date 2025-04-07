@@ -1,3 +1,5 @@
+// server/src/services/user.service.ts
+
 import { Types } from 'mongoose';
 import tagIndexMap from '@fake-stack-overflow/shared/tagIndexMap.json'; // Adjust path as needed
 import QuestionModel from '../models/questions.model';
@@ -30,9 +32,6 @@ function formatError(error: unknown): string {
 
 /**
  * Saves a new user to the database.
- *
- * @param user - The user object to be saved, containing user details like username, password, etc.
- * @returns Resolves with the saved user object (without the password) or an error message.
  */
 export const saveUser = async (user: User): Promise<UserResponse> => {
   try {
@@ -40,7 +39,6 @@ export const saveUser = async (user: User): Promise<UserResponse> => {
     if (!result) {
       throw new Error('Failed to create user');
     }
-
     // Remove password from the returned object
     const safeUser: SafeDatabaseUser = {
       _id: result._id,
@@ -58,10 +56,7 @@ export const saveUser = async (user: User): Promise<UserResponse> => {
 };
 
 /**
- * Retrieves a user from the database by their username (excluding password).
- *
- * @param username - The username of the user to find.
- * @returns The found user object (without the password) or an error message.
+ * Retrieves a user by their username (excluding password).
  */
 export const getUserByUsername = async (username: string): Promise<UserResponse> => {
   try {
@@ -78,15 +73,12 @@ export const getUserByUsername = async (username: string): Promise<UserResponse>
 };
 
 /**
- * Retrieves all users from the database (excluding passwords).
- * Users are returned in the order they were created (oldest first).
- *
- * @returns An array of user objects or an error message.
+ * Retrieves all users (excluding passwords).
  */
 export const getUsersList = async (): Promise<UsersResponse> => {
   try {
     const users: SafeDatabaseUser[] = await UserModel.find().select('-password').lean();
-    return users; // If no users, returns empty array []
+    return users;
   } catch (error: unknown) {
     return { error: `Error occurred when finding users: ${formatError(error)}` };
   }
@@ -95,13 +87,9 @@ export const getUsersList = async (): Promise<UsersResponse> => {
 /**
  * Authenticates a user by verifying their username and password.
  * (Note: This is not secure for production without hashing!)
- *
- * @param loginCredentials - An object containing the username and password.
- * @returns The authenticated user object (without the password) or an error message.
  */
 export const loginUser = async (loginCredentials: UserCredentials): Promise<UserResponse> => {
   const { username, password } = loginCredentials;
-
   try {
     const user: SafeDatabaseUser | null = await UserModel.findOne({ username, password })
       .select('-password')
@@ -116,16 +104,11 @@ export const loginUser = async (loginCredentials: UserCredentials): Promise<User
 };
 
 /**
- * Deletes a user from the database by their username.
- *
- * @param username - The username of the user to delete.
- * @returns The deleted user object (without the password) or an error message.
+ * Deletes a user by their username.
  */
 export const deleteUserByUsername = async (username: string): Promise<UserResponse> => {
   try {
-    const deletedUser: SafeDatabaseUser | null = await UserModel.findOneAndDelete({
-      username,
-    })
+    const deletedUser: SafeDatabaseUser | null = await UserModel.findOneAndDelete({ username })
       .select('-password')
       .lean();
     if (!deletedUser) {
@@ -139,10 +122,6 @@ export const deleteUserByUsername = async (username: string): Promise<UserRespon
 
 /**
  * Updates user information in the database.
- *
- * @param username - The username of the user to update.
- * @param updates - An object containing the fields to update and their new values.
- * @returns The updated user object (without the password) or an error message.
  */
 export const updateUser = async (
   username: string,
@@ -152,7 +131,7 @@ export const updateUser = async (
     const updatedUser: SafeDatabaseUser | null = await UserModel.findOneAndUpdate(
       { username },
       { $set: updates },
-      { new: true },
+      { new: true }
     )
       .select('-password')
       .lean();
@@ -167,13 +146,15 @@ export const updateUser = async (
 
 /**
  * Returns up to 10 users with the highest points, sorted descending (excluding passwords).
- *
- * @returns Either an array of users or an error object.
  */
 export const getTop10ByPoints = async (): Promise<SafeDatabaseUser[] | { error: string }> => {
   try {
-    const top10 = await UserModel.find().select('-password').sort({ points: -1 }).limit(10).lean();
-    return top10; // If no users, returns empty array []
+    const top10 = await UserModel.find()
+      .select('-password')
+      .sort({ points: -1 })
+      .limit(10)
+      .lean();
+    return top10;
   } catch (error: unknown) {
     return { error: `Error retrieving top 10 by points: ${formatError(error)}` };
   }
@@ -181,9 +162,6 @@ export const getTop10ByPoints = async (): Promise<SafeDatabaseUser[] | { error: 
 
 /**
  * Returns the rank of a user by username, based on how many users have strictly more points.
- *
- * @param username - The username whose rank we want to find.
- * @returns An object with `rank` or an error object.
  */
 export const getRankForUser = async (
   username: string,
@@ -193,11 +171,8 @@ export const getRankForUser = async (
     if (!user) {
       return { error: 'User not found' };
     }
-
-    // Count how many users have strictly more points than this user
     const higherPointsCount = await UserModel.countDocuments({ points: { $gt: user.points } });
-    const rank = higherPointsCount + 1; // rank is 1-based
-
+    const rank = higherPointsCount + 1;
     return { rank };
   } catch (error: unknown) {
     return { error: `Error retrieving user rank: ${formatError(error)}` };
@@ -210,7 +185,7 @@ export const getRankForUser = async (
  */
 export const updateUserPreferences = async (
   userId: string,
-  updates: { index: number; value: number }[],
+  updates: { index: number; value: number }[]
 ): Promise<UserResponse> => {
   try {
     const user = await UserModel.findById(userId);
@@ -224,22 +199,19 @@ export const updateUserPreferences = async (
       }
     });
     await user.save();
-
-    // Construct a safe user response (include preferences if needed).
+    // Construct a safe user response.
     const safeUser: SafeDatabaseUser = {
       _id: user._id,
       username: user.username,
       dateJoined: user.dateJoined,
       biography: user.biography,
-      // Optionally, include preferences if desired:
       preferences: user.preferences,
       points: user.points,
       aiToggler: user.aiToggler,
     };
-
     return safeUser;
-  } catch (error) {
-    return { error: `Error occurred when updating preferences: ${error}` };
+  } catch (error: unknown) {
+    return { error: `Error occurred when updating preferences: ${formatError(error)}` };
   }
 };
 
@@ -248,16 +220,14 @@ export const updateUserPreferences = async (
  * with the questions' tag vectors using cosine similarity.
  */
 export const getUserRecommendations = async (
-  userId: string,
+  userId: string
 ): Promise<{ question: PopulatedDatabaseQuestion; similarity: number }[] | { error: string }> => {
   try {
     const user = await UserModel.findById(userId);
     if (!user) {
       throw new Error('User not found');
     }
-
-    // Retrieve all questions and populate the tags so that we get the full Tag objects.
-    // New: retrieve questions with tags fully populated
+    // Retrieve all questions with fully populated tags and related fields.
     const questions = await QuestionModel.find()
       .populate<{ tags: DatabaseTag[] }>('tags')
       .populate<{ answers: PopulatedDatabaseAnswer[] }>({
@@ -272,7 +242,6 @@ export const getUserRecommendations = async (
       .exec();
 
     // Convert an array of Tag objects into a 1000-dimensional binary vector.
-    // We assume each populated tag has a 'name' property.
     const tagsToVector = (tags: DatabaseTag[]): number[] => {
       const vector = new Array(1000).fill(0);
       for (const tag of tags) {
@@ -293,19 +262,16 @@ export const getUserRecommendations = async (
       return dot / (normA * normB);
     };
 
-    // Compute similarity for each question.
     const recommendations = await Promise.all(
-      questions.map(async question => {
-        const questionVector = await tagsToVector(question.tags);
+      questions.map(async (question) => {
+        const questionVector = tagsToVector(question.tags);
         const similarity = cosineSimilarity(user.preferences, questionVector);
         return { question, similarity };
-      }),
+      })
     );
-
-    // Sort recommendations from highest similarity to lowest.
     recommendations.sort((a, b) => b.similarity - a.similarity);
     return recommendations;
-  } catch (error) {
-    return { error: `Error occurred when retrieving recommendations: ${error}` };
+  } catch (error: unknown) {
+    return { error: `Error occurred when retrieving recommendations: ${formatError(error)}` };
   }
 };

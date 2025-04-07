@@ -18,6 +18,7 @@ import leaderboardController from './controllers/leaderboard.controller';
 import sessionController from './controllers/session.controller';
 import registerCollabHandlers from './controllers/collab.controller';
 
+
 dotenv.config();
 
 const MONGO_URL = `${process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017'}/fake_so`;
@@ -34,7 +35,7 @@ const socket: FakeSOSocket = new Server(server, {
 registerCollabHandlers(socket);
 
 function connectDatabase() {
-  return mongoose.connect(MONGO_URL).catch(err => console.log('MongoDB connection error: ', err));
+  return mongoose.connect(MONGO_URL).catch(err => console.log('MongoDB connection error:', err));
 }
 
 function startServer() {
@@ -44,8 +45,10 @@ function startServer() {
   });
 }
 
+
 socket.on('connection', (clientSocket) => {
   console.log('A user connected ->', clientSocket.id);
+
 
   clientSocket.on('disconnect', () => {
     console.log('User disconnected');
@@ -55,7 +58,6 @@ socket.on('connection', (clientSocket) => {
 process.on('SIGINT', async () => {
   await mongoose.disconnect();
   socket.close();
-
   server.close(() => {
     console.log('Server closed.');
     process.exit(0);
@@ -87,5 +89,4 @@ app.use('/games', gameController(socket));
 app.use('/leaderboard', leaderboardController(socket));
 app.use('/sessions', sessionController(socket));
 
-// Export the app instance along with server and startServer
 export { app, server, startServer };
