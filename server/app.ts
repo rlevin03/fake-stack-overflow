@@ -18,7 +18,7 @@ import chatController from './controllers/chat.controller';
 import gameController from './controllers/game.controller';
 import leaderboardController from './controllers/leaderboard.controller';
 import sessionController from './controllers/session.controller';
-
+import badgeController from './controllers/badge.controller';
 dotenv.config();
 
 const MONGO_URL = `${process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017'}/fake_so`;
@@ -83,6 +83,7 @@ app.use('/chat', chatController(socket));
 app.use('/games', gameController(socket));
 app.use('/leaderboard', leaderboardController(socket));
 app.use('/sessions', sessionController(socket));
+app.use('/badge', badgeController());
 
 // Export the app instance, server, and startServer function
 export { app, server, startServer };

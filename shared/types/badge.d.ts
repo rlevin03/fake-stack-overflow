@@ -1,4 +1,5 @@
 import { ObjectId } from 'mongodb';
+import { Request } from 'express';
 
 export type BadgeNameType =
   | 'Curious Cat'
@@ -44,4 +45,10 @@ export interface Badge {
  */
 export interface DatabaseBadge extends Badge {
   _id: ObjectId;
+}
+
+export interface BadgeRequest extends Request {
+  body: {
+    badgeIds: string[];
+  };
 }

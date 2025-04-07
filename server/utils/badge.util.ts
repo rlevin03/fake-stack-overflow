@@ -22,6 +22,7 @@ export async function awardingBadgeHelper(
     }
     const badgeIds = user.badges;
     const badge = await BadgeModel.findOne({ _id: { $in: badgeIds }, name: badgeName });
+    console.log('badge', badge);
     if (!badge) {
       await saveBadge(username, badgeName, badgeDescription);
     }

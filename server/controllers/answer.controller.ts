@@ -110,7 +110,6 @@ const answerController = (socket: FakeSOSocket) => {
       // --- End: Update user preferences for answering ---
 
       // --- Begin: Update the helping hand badge progress ---
-      // create a badge if there isnt one
       await awardingBadgeHelper(
         ansInfo.ansBy,
         BadgeName.HELPING_HAND,
@@ -122,8 +121,6 @@ const answerController = (socket: FakeSOSocket) => {
       //Begin: Update the lifelife badge progress
       if (
         question &&
-        question.askDateTime &&
-        ansInfo.ansDateTime &&
         question.askDateTime.getTime() - ansInfo.ansDateTime.getTime() > 24 * 60 * 60 * 1000
       ) {
         await awardingBadgeHelper(ansInfo.ansBy, BadgeName.LIFELINE, BadgeDescription.LIFELINE);
@@ -134,8 +131,6 @@ const answerController = (socket: FakeSOSocket) => {
       //Begin: Update the lightning responder badge progress
       if (
         question &&
-        question.askDateTime &&
-        ansInfo.ansDateTime &&
         ansInfo.ansDateTime.getTime() - question.askDateTime.getTime() < 5 * 60 * 1000
       ) {
         await awardingBadgeHelper(

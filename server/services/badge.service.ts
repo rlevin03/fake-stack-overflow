@@ -109,3 +109,12 @@ export const saveBadge = async (
     throw new Error(`Error creating badge: ${error}`);
   }
 };
+
+export const getBadgesByIds = async (badgeIds: string[]): Promise<Badge[]> => {
+  try {
+    const badges = await BadgeModel.find({ _id: { $in: badgeIds } });
+    return badges;
+  } catch (error) {
+    throw new Error(`Error getting badges: ${error}`);
+  }
+};
