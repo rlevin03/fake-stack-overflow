@@ -6,6 +6,7 @@ import { DatabaseMessage } from './message';
 import { PopulatedDatabaseQuestion } from './question';
 import { SafeDatabaseUser } from './user';
 import { BaseMove, GameInstance, GameInstanceID, GameMove, GameState } from './game';
+import { Badge } from './badge';
 
 export interface AnswerUpdatePayload {
   qid: ObjectId;
@@ -108,6 +109,7 @@ export interface ServerToClientEvents {
   // --- NEW EVENTS FOR LEADERBOARD ---
   userRankResponse: (payload: { rank: number }) => void;
   top10Response: (payload: { username: string; points: number }[]) => void;
+  badgesResponse: (badges: Badge[]) => void;
   error: (msg: string) => void;
 
   // -- Collaborative Editor events --

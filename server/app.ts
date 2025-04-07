@@ -16,8 +16,8 @@ import chatController from './controllers/chat.controller';
 import gameController from './controllers/game.controller';
 import leaderboardController from './controllers/leaderboard.controller';
 import sessionController from './controllers/session.controller';
+import badgeController from './controllers/badge.controller';
 import registerCollabHandlers from './controllers/collab.controller';
-
 
 dotenv.config();
 
@@ -45,7 +45,6 @@ function startServer() {
   });
 }
 
-
 socket.on('connection', (clientSocket) => {
   console.log('A user connected ->', clientSocket.id);
 
@@ -68,7 +67,7 @@ app.use(
   cors({
     credentials: true,
     origin: [CLIENT_URL],
-  })
+  }),
 );
 
 app.use(express.json());
@@ -88,5 +87,6 @@ app.use('/chat', chatController(socket));
 app.use('/games', gameController(socket));
 app.use('/leaderboard', leaderboardController(socket));
 app.use('/sessions', sessionController(socket));
+app.use('/badge', badgeController());
 
 export { app, server, startServer };

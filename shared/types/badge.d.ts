@@ -1,18 +1,38 @@
 import { ObjectId } from 'mongodb';
+import { Request } from 'express';
+
+export type BadgeNameType =
+  | 'Curious Cat'
+  | 'Helping Hand'
+  | 'Lifeline'
+  | 'Lightning Responder'
+  | 'Respected Voice'
+  | 'Peoples Champion'
+  | 'Pair Programmer'
+  | 'The Historian';
+
+export type BadgeDescriptionType =
+  | 'Asked 10+ questions that received at least one upvote.'
+  | 'Provided 5+ answers'
+  | 'Answered a question that was unanswered for more than 24 hours.'
+  | 'Answered a question within 5 minutes of it being posted.'
+  | 'Accumulated 500+ reputation points from upvotes on answers.'
+  | 'Received 50+ upvotes on a single answer.'
+  | 'Participated in a live collaborative coding session.'
+  | 'Reverted code to a previous version using the edit history feature.';
 
 /**
  * Represents a badge that can be earned by users.
- * - `level`: The level of the badge.
+ * - `progress`: The progress towards earning the badge.
+ * - `attained`: A boolean indicating if the badge has been attained.
  * - `name`: The name of the badge.
- * - `description`: A description of the badge.
- * - `icon`: The icon representing the badge.
+ * - `description`: A brief description of the badge.
  */
-
 export interface Badge {
-  level: number;
-  name: string;
-  description: string;
-  icon: string;
+  progress: number;
+  attained: boolean;
+  name: BadgeNameType;
+  description: BadgeDescriptionType;
 }
 
 /**
@@ -25,4 +45,10 @@ export interface Badge {
  */
 export interface DatabaseBadge extends Badge {
   _id: ObjectId;
+}
+
+export interface BadgeRequest extends Request {
+  body: {
+    badgeIds: string[];
+  };
 }

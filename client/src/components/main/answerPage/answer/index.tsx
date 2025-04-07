@@ -2,7 +2,8 @@ import React from 'react';
 import { handleHyperlink } from '../../../../tool';
 import CommentSection from '../../commentSection';
 import './index.css';
-import { Comment, DatabaseComment } from '../../../../types/types';
+import { Comment, DatabaseComment, PopulatedDatabaseAnswer } from '../../../../types/types';
+import VoteComponent from '../../voteComponent';
 
 /**
  * Interface representing the props for the AnswerView component.
@@ -12,6 +13,7 @@ import { Comment, DatabaseComment } from '../../../../types/types';
  * - meta Additional metadata related to the answer.
  * - comments An array of comments associated with the answer.
  * - handleAddComment Callback function to handle adding a new comment.
+ * - answer The full answer object containing voting information.
  */
 interface AnswerProps {
   text: string;
@@ -19,6 +21,7 @@ interface AnswerProps {
   meta: string;
   comments: DatabaseComment[];
   handleAddComment: (comment: Comment) => void;
+  answer: PopulatedDatabaseAnswer;
 }
 
 /**
@@ -30,8 +33,9 @@ interface AnswerProps {
  * @param meta Additional metadata related to the answer.
  * @param comments An array of comments associated with the answer.
  * @param handleAddComment Function to handle adding a new comment.
+ * @param answer The full answer object containing voting information.
  */
-const AnswerView = ({ text, ansBy, meta, comments, handleAddComment }: AnswerProps) => (
+const AnswerView = ({ text, ansBy, meta, comments, handleAddComment, answer }: AnswerProps) => (
   <div className='answer right_padding'>
     <div id='answerText' className='answerText'>
       {handleHyperlink(text)}
@@ -40,6 +44,7 @@ const AnswerView = ({ text, ansBy, meta, comments, handleAddComment }: AnswerPro
       <div className='answer_author'>{ansBy}</div>
       <div className='answer_question_meta'>{meta}</div>
     </div>
+    <VoteComponent item={answer} type='answer' />
     <CommentSection comments={comments} handleAddComment={handleAddComment} />
   </div>
 );
