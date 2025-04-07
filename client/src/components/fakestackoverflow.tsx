@@ -19,6 +19,7 @@ import AllGamesPage from './main/games/allGamesPage';
 import GamePage from './main/games/gamePage';
 import InterestsSelection from './interestsSelection';
 import SessionsPage from './main/sessionsPage';
+import CollaborativeEditor from './main/collabEditor';
 
 const ProtectedRoute = ({
   user,
@@ -72,10 +73,7 @@ const FakeStackOverflow = ({ socket }: { socket: FakeSOSocket | null }) => {
             <Route path='/games/:gameID' element={<GamePage />} />
             <Route path='/select-interests' element={<InterestsSelection />} />
             <Route path='/:username/sessions' element={<SessionsPage />} />
-            <Route
-              path='/:username/sessions/:codingSessionID'
-              element={<div>Collaborate with user</div>}
-            />
+            <Route path='/sessions/:codingSessionID' element={<CollaborativeEditor />} />
           </Route>
         }
       </Routes>

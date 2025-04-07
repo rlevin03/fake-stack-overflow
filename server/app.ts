@@ -1,7 +1,3 @@
-// The server should run on localhost port 8000.
-// This is where you should start writing server-side code for this application.
-// startServer() is a function that starts the server
-// the server will listen on .env.CLIENT_URL if set, otherwise 8000
 import dotenv from 'dotenv';
 import express, { Request, Response } from 'express';
 import mongoose from 'mongoose';
@@ -20,7 +16,7 @@ import chatController from './controllers/chat.controller';
 import gameController from './controllers/game.controller';
 import leaderboardController from './controllers/leaderboard.controller';
 import sessionController from './controllers/session.controller';
-
+import registerCollabHandlers from './controllers/collab.controller';
 
 dotenv.config();
 
@@ -34,6 +30,9 @@ const socket: FakeSOSocket = new Server(server, {
   cors: { origin: '*' },
 });
 
+// Call registerCollabHandlers to set up collaboration events
+registerCollabHandlers(socket);
+
 function connectDatabase() {
   return mongoose.connect(MONGO_URL).catch(err => console.log('MongoDB connection error: ', err));
 }
@@ -45,10 +44,10 @@ function startServer() {
   });
 }
 
-socket.on('connection', socket => {
-  console.log('A user connected ->', socket.id);
+socket.on('connection', (clientSocket) => {
+  console.log('A user connected ->', clientSocket.id);
 
-  socket.on('disconnect', () => {
+  clientSocket.on('disconnect', () => {
     console.log('User disconnected');
   });
 });
@@ -67,7 +66,7 @@ app.use(
   cors({
     credentials: true,
     origin: [CLIENT_URL],
-  }),
+  })
 );
 
 app.use(express.json());
@@ -88,5 +87,5 @@ app.use('/games', gameController(socket));
 app.use('/leaderboard', leaderboardController(socket));
 app.use('/sessions', sessionController(socket));
 
-// Export the app instance
+// Export the app instance along with server and startServer
 export { app, server, startServer };
