@@ -36,7 +36,7 @@ interface AnswerProps {
  * @param answer The full answer object containing voting information.
  */
 
-const AnswerView = ({ text, ansBy, meta, comments, handleAddComment }: AnswerProps) => {
+const AnswerView = ({ text, ansBy, meta, comments, handleAddComment, answer }: AnswerProps) => {
   const isAIAnswer = ansBy === 'AI';
 
   return (
@@ -55,6 +55,7 @@ const AnswerView = ({ text, ansBy, meta, comments, handleAddComment }: AnswerPro
         <div className='answer_author'>{ansBy}</div>
         <div className='answer_question_meta'>{meta}</div>
       </div>
+      <VoteComponent item={answer} type='answer' />
       <CommentSection comments={comments} handleAddComment={handleAddComment} />
     </div>
   );
