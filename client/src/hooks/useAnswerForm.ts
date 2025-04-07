@@ -100,7 +100,7 @@ const useAnswerForm = () => {
       downVotes: [],
     };
 
-    const res = await addAnswer.addAnswer(questionID, answer);
+    const res = await addAnswer(questionID, answer);
 
     if (res && res._id) {
       navigate(`/question/${questionID}`);

@@ -18,6 +18,7 @@ import leaderboardController from './controllers/leaderboard.controller';
 import sessionController from './controllers/session.controller';
 import badgeController from './controllers/badge.controller';
 import registerCollabHandlers from './controllers/collab.controller';
+import { registerSocketHandlers } from './socketHandlers';
 
 dotenv.config();
 
@@ -33,6 +34,9 @@ const socket: FakeSOSocket = new Server(server, {
 
 // Call registerCollabHandlers to set up collaboration events
 registerCollabHandlers(socket);
+
+// Register our autocomplete (and any other) socket event handlers.
+registerSocketHandlers(socket);
 
 function connectDatabase() {
   return mongoose.connect(MONGO_URL).catch(err => console.log('MongoDB connection error:', err));
