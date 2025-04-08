@@ -1,21 +1,12 @@
 // client/src/components/ProfileSettings/index.tsx
-
 import React from 'react';
 import './index.css';
 import useProfileSettings from '../../hooks/useProfileSettings';
 import InterestsCard from './InterestsCard';
 
-interface UserData {
-  username: string;
-  biography?: string;
-  dateJoined?: string;
-  // Add other fields as needed...
-}
-
 const ProfileSettings: React.FC = () => {
   const {
     userData,
-    loading,
     editBioMode,
     newBio,
     newPassword,
@@ -37,24 +28,22 @@ const ProfileSettings: React.FC = () => {
     handleDeleteUser,
     aiToggler,
     handleToggleAIToggler,
+    hideRanking,
+    handleToggleRankingVisibility,
   } = useProfileSettings();
 
   return (
     <div className='page-container' style={{ display: 'flex', gap: '2rem' }}>
-      {/* ---------------- PROFILE CARD ---------------- */}
       <div className='profile-card' style={{ flex: 1 }}>
         <h2>Profile</h2>
         {successMessage && <p className='success-message'>{successMessage}</p>}
         {errorMessage && <p className='error-message'>{errorMessage}</p>}
-
         {userData ? (
           <>
             <h4>General Information</h4>
             <p>
               <strong>Username:</strong> {userData.username}
             </p>
-
-            {/* Biography Section */}
             {!editBioMode && (
               <p>
                 <strong>Biography:</strong> {userData.biography || 'No biography yet.'}
@@ -71,7 +60,6 @@ const ProfileSettings: React.FC = () => {
                 )}
               </p>
             )}
-
             {editBioMode && canEditProfile && (
               <div style={{ margin: '1rem 0' }}>
                 <input
@@ -94,13 +82,10 @@ const ProfileSettings: React.FC = () => {
                 </button>
               </div>
             )}
-
             <p>
               <strong>Date Joined:</strong>{' '}
               {userData.dateJoined ? new Date(userData.dateJoined).toLocaleDateString() : 'N/A'}
             </p>
-
-            {/* ----- AI Settings Section ----- */}
             <div className='ai-settings'>
               <h4>AI Settings</h4>
               <label>
@@ -108,11 +93,18 @@ const ProfileSettings: React.FC = () => {
                 Enable AI-Generated Answers
               </label>
             </div>
-
-            {/* ---- Interests/Preferences Section ---- */}
+            <div className='ranking-toggle-container' style={{ marginTop: '1rem' }}>
+              <h4>Public Ranking Settings</h4>
+              <label>
+                <input
+                  type='checkbox'
+                  checked={hideRanking}
+                  onChange={handleToggleRankingVisibility}
+                />
+                Hide my public ranking
+              </label>
+            </div>
             {canEditProfile && <InterestsCard />}
-
-            {/* Reset Password Section */}
             {canEditProfile && (
               <>
                 <h4>Reset Password</h4>
@@ -138,8 +130,6 @@ const ProfileSettings: React.FC = () => {
                 </button>
               </>
             )}
-
-            {/* Danger Zone */}
             {canEditProfile && (
               <>
                 <h4>Danger Zone</h4>
@@ -152,8 +142,6 @@ const ProfileSettings: React.FC = () => {
         ) : (
           <p>No user data found. Make sure the username parameter is correct.</p>
         )}
-
-        {/* Confirmation Modal */}
         {showConfirmation && (
           <div className='modal'>
             <div className='modal-content'>

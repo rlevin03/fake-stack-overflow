@@ -30,7 +30,7 @@ import {
 import UserModel from '../models/users.model';
 
 // NEW IMPORTS:
-import { getTop10ByPoints, getRankForUser } from './user.service';
+import { getTop10ByPoints, getRankForUser, appendPointsHistory } from './user.service';
 
 /**
  * Checks if keywords exist in a question's title or text.
@@ -189,12 +189,17 @@ export const saveQuestion = async (
       { $push: { questionsAsked: result._id }, $inc: { points: 10 } },
     );
 
+    const userRecord = await UserModel.findOne({ username: question.askedBy });
+    if (userRecord) {
+      const historyEntry = `Awarded 10 points for posting a new question at ${new Date().toLocaleString()}`;
+      await appendPointsHistory(userRecord._id.toString(), historyEntry);
+    }
+
     // 3) Fetch the updated top 10
     const top10 = await getTop10ByPoints();
     if (Array.isArray(top10)) {
       socket.emit('top10Response', top10);
     } else {
-      console.error('Error fetching top 10:', top10.error);
       // Optionally: socket.emit('error', top10.error);
     }
 
@@ -203,7 +208,6 @@ export const saveQuestion = async (
     if (!('error' in rankResult)) {
       socket.emit('userRankResponse', { rank: rankResult.rank });
     } else {
-      console.error('Error fetching user rank:', rankResult.error);
       // Optionally: socket.emit('error', rankResult.error);
     }
 
@@ -296,12 +300,18 @@ export const addVoteToQuestion = async (
       },
     );
 
+    const voterUser = await UserModel.findOne({ username });
+    if (voterUser) {
+      const action = voteType === 'upvote' ? 'upvoted' : 'downvoted';
+      const historyEntry = `Awarded 1 point for ${action} a question at ${new Date().toLocaleString()}.`;
+      await appendPointsHistory(voterUser._id.toString(), historyEntry);
+    }
+
     // 3) Fetch the updated top 10
     const top10 = await getTop10ByPoints();
     if (Array.isArray(top10)) {
       socket.emit('top10Response', top10);
     } else {
-      console.error('Error fetching top 10:', top10.error);
       // Optionally: socket.emit('error', top10.error);
     }
 

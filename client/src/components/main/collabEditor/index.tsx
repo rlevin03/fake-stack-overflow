@@ -2,8 +2,6 @@ import React, { useContext, useEffect, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import MonacoEditor, { OnMount } from '@monaco-editor/react';
 import io from 'socket.io-client';
-import prettier from 'prettier/standalone';
-import babelPlugin from 'prettier/plugins/babel';
 import * as monaco from 'monaco-editor';
 import UserContext from '../../../contexts/UserContext';
 import { getSessionByIdAPI } from '../../../services/sessionService';
@@ -42,25 +40,6 @@ const handleError = (
   if (notificationFn) {
     notificationFn(`${errorMessage}: ${error instanceof Error ? error.message : String(error)}`);
   }
-};
-
-// Type-safe throttle function that preserves parameter types
-const throttle = <Args extends unknown[], R>(
-  func: (...args: Args) => R,
-  delay: number,
-): ((...args: Args) => R | undefined) => {
-  let lastCall = 0;
-
-  return (...args: Args): R | undefined => {
-    const now = new Date().getTime();
-
-    if (now - lastCall >= delay) {
-      lastCall = now;
-      return func(...args);
-    }
-
-    return undefined;
-  };
 };
 
 const CollaborativeEditor: React.FC = () => {
@@ -116,30 +95,6 @@ const CollaborativeEditor: React.FC = () => {
     setIsDarkTheme(prev => !prev);
   };
 
-  // Define the save function with proper types
-  const saveVersionFunction = async (sessionId: string, currentCode: string): Promise<void> => {
-    try {
-      const response = await fetch(
-        `${process.env.REACT_APP_SERVER_URL}/sessions/${sessionId}/versions`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ code: currentCode }),
-        },
-      );
-      if (!response.ok) {
-        showErrorNotification('Failed to save code version');
-      }
-    } catch (error) {
-      handleError(error, showErrorNotification, 'Error saving code version');
-    }
-  };
-
-  // Function to save the code version - throttled to every 5 seconds
-  const saveCodeVersion = useRef(throttle(saveVersionFunction, 5000)).current;
-
   // Fetch session data when component mounts
   useEffect(() => {
     const fetchSession = async () => {
@@ -164,84 +119,91 @@ const CollaborativeEditor: React.FC = () => {
     fetchSession();
   }, [codingSessionID]);
 
-  // Apply decorations for all edit highlights with error handling
-  const applyHighlightDecorations = () => {
-    if (!editorInstance) return;
+  useEffect(() => {
+    // Define applyHighlightDecorations inside useEffect
+    const applyHighlightDecorations = () => {
+      if (!editorInstance) return;
 
-    const model = editorInstance.getModel();
-    if (!model) return;
+      const model = editorInstance.getModel();
+      if (!model) return;
 
-    try {
-      const now = Date.now();
-      // Filter valid highlights - both by time and by line number validity
-      const validHighlights = editHighlights.filter(highlight => {
-        // Check if highlight is still within time window
-        const isRecent = now - highlight.timestamp < 3000;
+      try {
+        const now = Date.now();
+        // Filter valid highlights - both by time and by line number validity
+        const validHighlights = editHighlights.filter(highlight => {
+          // Check if highlight is still within time window
+          const isRecent = now - highlight.timestamp < 3000;
 
-        // Check if line number is valid for current model
-        const isValidLine =
-          typeof highlight.lineNumber === 'number' &&
-          highlight.lineNumber > 0 &&
-          highlight.lineNumber <= model.getLineCount();
+          // Check if line number is valid for current model
+          const isValidLine =
+            typeof highlight.lineNumber === 'number' &&
+            highlight.lineNumber > 0 &&
+            highlight.lineNumber <= model.getLineCount();
 
-        return isRecent && isValidLine;
-      });
-
-      // Create decorations only for valid highlights
-      const decorations: monaco.editor.IModelDeltaDecoration[] = validHighlights.map(highlight => {
-        try {
-          const maxColumn = model.getLineMaxColumn(highlight.lineNumber);
-          return {
-            range: new monaco.Range(
-              highlight.lineNumber,
-              1,
-              highlight.lineNumber,
-              maxColumn || 1, // Fallback to 1 if maxColumn is somehow 0
-            ),
-            options: {
-              inlineClassName: 'recent-edit',
-            },
-          };
-        } catch (err) {
-          // Broadcast error to all users
-          if (codingSessionID) {
-            socket.emit('editorError', {
-              codingSessionID,
-              errorMessage: `Error with line ${highlight.lineNumber}: Invalid line number`,
-            });
-          }
-
-          // Return a "safe" decoration that won't cause errors
-          return {
-            range: new monaco.Range(1, 1, 1, 1),
-            options: {
-              inlineClassName: 'recent-edit',
-            },
-          };
-        }
-      });
-
-      // Apply decorations safely
-      highlightDecorationsRef.current = editorInstance.deltaDecorations(
-        highlightDecorationsRef.current,
-        decorations,
-      );
-    } catch (err) {
-      // Broadcast error to all users
-      if (codingSessionID) {
-        socket.emit('editorError', {
-          codingSessionID,
-          errorMessage: 'Error applying highlight decorations',
+          return isRecent && isValidLine;
         });
-      }
 
-      // Reset decorations to clean state if we encounter an error
-      highlightDecorationsRef.current = editorInstance.deltaDecorations(
-        highlightDecorationsRef.current,
-        [],
-      );
-    }
-  };
+        // Create decorations only for valid highlights
+        const decorations: monaco.editor.IModelDeltaDecoration[] = validHighlights.map(
+          highlight => {
+            try {
+              const maxColumn = model.getLineMaxColumn(highlight.lineNumber);
+              return {
+                range: new monaco.Range(
+                  highlight.lineNumber,
+                  1,
+                  highlight.lineNumber,
+                  maxColumn || 1, // Fallback to 1 if maxColumn is somehow 0
+                ),
+                options: {
+                  inlineClassName: 'recent-edit',
+                },
+              };
+            } catch (err) {
+              // Broadcast error to all users
+              if (codingSessionID) {
+                socket.emit('editorError', {
+                  codingSessionID,
+                  errorMessage: `Error with line ${highlight.lineNumber}: Invalid line number`,
+                });
+              }
+
+              // Return a "safe" decoration that won't cause errors
+              return {
+                range: new monaco.Range(1, 1, 1, 1),
+                options: {
+                  inlineClassName: 'recent-edit',
+                },
+              };
+            }
+          },
+        );
+
+        // Apply decorations safely
+        highlightDecorationsRef.current = editorInstance.deltaDecorations(
+          highlightDecorationsRef.current,
+          decorations,
+        );
+      } catch (err) {
+        // Broadcast error to all users
+        if (codingSessionID) {
+          socket.emit('editorError', {
+            codingSessionID,
+            errorMessage: 'Error applying highlight decorations',
+          });
+        }
+
+        // Reset decorations to clean state if we encounter an error
+        highlightDecorationsRef.current = editorInstance.deltaDecorations(
+          highlightDecorationsRef.current,
+          [],
+        );
+      }
+    };
+
+    // Call the function
+    applyHighlightDecorations();
+  }, [editorInstance, editHighlights, codingSessionID]);
 
   // Clean up expired highlights
   useEffect(() => {
@@ -252,11 +214,6 @@ const CollaborativeEditor: React.FC = () => {
 
     return () => clearInterval(cleanupInterval);
   }, []);
-
-  // Update decorations whenever editHighlights changes
-  useEffect(() => {
-    applyHighlightDecorations();
-  }, [editHighlights]);
 
   // Socket event handling.
   useEffect(() => {
@@ -337,13 +294,6 @@ const CollaborativeEditor: React.FC = () => {
     };
   }, [codingSessionID, username]);
 
-  // Handle code changes and save versions
-  useEffect(() => {
-    if (code && code !== '# Start coding here...' && codingSessionID && !isLoading) {
-      saveCodeVersion(codingSessionID, code);
-    }
-  }, [code, codingSessionID, saveCodeVersion, isLoading]);
-
   // Handle code changes.
   const handleEditorChange = (value: string | undefined) => {
     if (value !== undefined && codingSessionID) {
@@ -371,6 +321,7 @@ const CollaborativeEditor: React.FC = () => {
 
       setCode(value);
       socket.emit('codeChange', { codingSessionID, code: value, username });
+      // No need for separate REST API call since socket.io is handling saving
     }
   };
 
@@ -382,13 +333,47 @@ const CollaborativeEditor: React.FC = () => {
 
   const formatCode = async () => {
     try {
-      const formatted = prettier.format(code, {
-        parser: 'babel',
-        plugins: [babelPlugin],
-      });
-      setCode(await formatted);
-      if (codingSessionID) {
-        socket.emit('codeChange', { codingSessionID, code: formatted, username });
+      // Simple formatting: standardize spacing and remove excessive blank lines
+      if (code.trim()) {
+        // Split into lines
+        const lines = code.split('\n');
+
+        // Remove excessive blank lines (more than 2 consecutive blank lines)
+        const formattedLines = [];
+        let blankLineCount = 0;
+
+        for (let i = 0; i < lines.length; i++) {
+          const line = lines[i].trimRight(); // Remove trailing whitespace
+
+          if (line.trim() === '') {
+            blankLineCount++;
+            // Only keep up to 2 consecutive blank lines
+            if (blankLineCount <= 2) {
+              formattedLines.push('');
+            }
+          } else {
+            blankLineCount = 0;
+
+            // Standardize spacing around operators
+            const formattedLine = line
+              // Add space after commas if not already there
+              .replace(/,(?!\s)/g, ', ')
+              // Add spaces around operators
+              .replace(/([+\-*/%=<>!&|^])([\w\d(])/g, '$1 $2')
+              .replace(/([\w\d)])([-+*/%=<>!&|^])/g, '$1 $2')
+              // Preserve indentation
+              .replace(/^\s*/, match => match);
+
+            formattedLines.push(formattedLine);
+          }
+        }
+
+        const formattedCode = formattedLines.join('\n');
+        setCode(formattedCode);
+
+        if (codingSessionID) {
+          socket.emit('codeChange', { codingSessionID, code: formattedCode, username });
+        }
       }
     } catch (error) {
       handleError(error, showErrorNotification, 'Formatting failed');

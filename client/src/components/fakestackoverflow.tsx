@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
+import { ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 import Layout from './layout';
 import Login from './auth/login';
 import { FakeSOSocket, SafeDatabaseUser } from '../types/types';
@@ -20,8 +22,8 @@ import GamePage from './main/games/gamePage';
 import InterestsSelection from './interestsSelection';
 import SessionsPage from './main/sessionsPage';
 import CollaborativeEditor from './main/collabEditor';
-import LeaderboardPage from './main/leaderboardPage'; // New import for Leaderboard
-
+import LeaderboardPage from './main/leaderboardPage';
+import BadgeNotificationHandler from './main/notificationBadge';
 
 const ProtectedRoute = ({
   user,
@@ -37,7 +39,12 @@ const ProtectedRoute = ({
   if (!user || !socket) {
     return <Navigate to='/' />;
   }
-  return <UserContext.Provider value={{ user, socket, setUser }}>{children}</UserContext.Provider>;
+  return (
+    <UserContext.Provider value={{ user, socket, setUser }}>
+      {children}
+      <BadgeNotificationHandler />
+    </UserContext.Provider>
+  );
 };
 
 const FakeStackOverflow = ({ socket }: { socket: FakeSOSocket | null }) => {
@@ -45,13 +52,15 @@ const FakeStackOverflow = ({ socket }: { socket: FakeSOSocket | null }) => {
 
   return (
     <LoginContext.Provider value={{ setUser }}>
+      <ToastContainer />
       <Routes>
         {/* Public Routes */}
         <Route path='/' element={<Login />} />
         <Route path='/signup' element={<Signup />} />
+
         {/* Protected Routes */}
         {
-        <Route
+          <Route
             element={
               <ProtectedRoute user={user} socket={socket} setUser={setUser}>
                 <Layout />
@@ -73,7 +82,7 @@ const FakeStackOverflow = ({ socket }: { socket: FakeSOSocket | null }) => {
             <Route path='/sessions/:codingSessionID' element={<CollaborativeEditor />} />
             <Route path='/leaderboard' element={<LeaderboardPage />} />
           </Route>
-          }
+        }
       </Routes>
     </LoginContext.Provider>
   );

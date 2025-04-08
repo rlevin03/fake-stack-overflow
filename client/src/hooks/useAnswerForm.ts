@@ -1,26 +1,23 @@
-import { useEffect, useState } from 'react';
+// client/src/hooks/useAnswerForm.ts
+import { useEffect, useState, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import io, { Socket } from 'socket.io-client';
 import { validateHyperlink } from '../tool';
 import { addAnswer } from '../services/answerService';
 import useUserContext from './useUserContext';
 import { Answer } from '../types/types';
 
-/**
- * Custom hook for managing the state and logic of an answer submission form.
- *
- * @returns text - the current text input for the answer.
- * @returns textErr - the error message related to the text input.
- * @returns setText - the function to update the answer text input.
- * @returns postAnswer - the function to submit the answer after validation.
- */
 const useAnswerForm = () => {
   const { qid } = useParams();
   const navigate = useNavigate();
-
   const { user } = useUserContext();
   const [text, setText] = useState<string>('');
   const [textErr, setTextErr] = useState<string>('');
   const [questionID, setQuestionID] = useState<string>('');
+  const [aiSuggestion, setAiSuggestion] = useState<string>('');
+
+  const socketRef = useRef<Socket | null>(null);
+  const debounceTimer = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     if (!qid) {
@@ -28,31 +25,71 @@ const useAnswerForm = () => {
       navigate('/home');
       return;
     }
-
     setQuestionID(qid);
   }, [qid, navigate]);
 
-  /**
-   * Function to post an answer to a question.
-   * It validates the answer text and posts the answer if it is valid.
-   */
+  // Setup socket connection for autocomplete suggestions
+  useEffect(() => {
+    socketRef.current = io(process.env.REACT_APP_SERVER_URL || 'http://localhost:8000');
+    const socket = socketRef.current;
+    // Listen specifically for answer autocomplete suggestions
+    socket.on('aiAutoCompleteResponseAnswer', (suggestion: string) => {
+      setAiSuggestion(suggestion);
+    });
+    return () => {
+      socket.off('aiAutoCompleteResponseAnswer');
+      socket.disconnect();
+    };
+  }, []);
+
+  // Only trigger autocomplete if user's AI toggler is enabled
+  const aiSuggestionsEnabled = user.aiToggler === true;
+
+  // Debounce input: when text changes, wait 4 seconds before emitting an autocomplete request.
+  useEffect(() => {
+    if (!aiSuggestionsEnabled) {
+      setAiSuggestion('');
+      return;
+    }
+    if (debounceTimer.current) {
+      clearTimeout(debounceTimer.current);
+    }
+    if (text.trim() === '') {
+      setAiSuggestion('');
+      return;
+    }
+    debounceTimer.current = setTimeout(() => {
+      // Emit an object with field 'answer' and the current text.
+      socketRef.current?.emit('aiAutoComplete', { field: 'answer', text });
+    }, 4000);
+
+    // eslint-disable-next-line consistent-return
+    return () => {
+      if (debounceTimer.current) clearTimeout(debounceTimer.current);
+    };
+  }, [text, aiSuggestionsEnabled]);
+
+  // Handle keyDown events; if Tab is pressed and a suggestion exists, append it.
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>): void => {
+    if (e.key === 'Tab' && aiSuggestion) {
+      e.preventDefault();
+      setText(prev => prev + aiSuggestion);
+      setAiSuggestion('');
+    }
+  };
+
+  // Post answer function
   const postAnswer = async () => {
     let isValid = true;
-
     if (!text) {
       setTextErr('Answer text cannot be empty');
       isValid = false;
     }
-
-    // Hyperlink validation
     if (!validateHyperlink(text)) {
       setTextErr('Invalid hyperlink format.');
       isValid = false;
     }
-
-    if (!isValid) {
-      return;
-    }
+    if (!isValid) return;
 
     const answer: Answer = {
       text,
@@ -66,16 +103,17 @@ const useAnswerForm = () => {
     const res = await addAnswer(questionID, answer);
 
     if (res && res._id) {
-      // navigate to the question that was answered
       navigate(`/question/${questionID}`);
     }
   };
 
   return {
     text,
-    textErr,
     setText,
+    textErr,
     postAnswer,
+    aiSuggestion,
+    handleKeyDown,
   };
 };
 

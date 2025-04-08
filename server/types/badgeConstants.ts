@@ -1,5 +1,6 @@
-import { BadgeNameType, BadgeDescriptionType } from '../types/types';
+import { BadgeNameType, BadgeDescriptionType } from './types';
 
+// eslint-disable-next-line @typescript-eslint/naming-convention
 export const BadgeName = {
   CURIOUS_CAT: 'Curious Cat' as BadgeNameType,
   HELPING_HAND: 'Helping Hand' as BadgeNameType,
@@ -11,6 +12,7 @@ export const BadgeName = {
   THE_HISTORIAN: 'The Historian' as BadgeNameType,
 } as const;
 
+// eslint-disable-next-line @typescript-eslint/naming-convention
 export const BadgeDescription = {
   CURIOUS_CAT: 'Asked 10+ questions that received at least one upvote.' as BadgeDescriptionType,
   HELPING_HAND: 'Provided 5+ answers' as BadgeDescriptionType,

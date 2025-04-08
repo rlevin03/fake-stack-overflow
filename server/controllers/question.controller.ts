@@ -23,11 +23,11 @@ import {
 import { processTags } from '../services/tag.service';
 import { populateDocument } from '../utils/database.util';
 import { updateUserPreferences } from '../services/user.service';
-import getGeminiResponse from '../services/gemini.service';
+import { getGeminiResponse } from '../services/gemini.service';
 import { saveAnswer, addAnswerToQuestion } from '../services/answer.service';
 import QuestionModel from '../models/questions.model';
 import UserModel from '../models/users.model';
-import { awardingBadgeHelper } from '../utils/badge.util';
+import awardingBadgeHelper from '../utils/badge.util';
 
 const questionController = (socket: FakeSOSocket) => {
   const router = express.Router();
@@ -138,31 +138,32 @@ const questionController = (socket: FakeSOSocket) => {
     const question: Question = req.body;
 
     try {
-      const questionswithtags = {
+      // Process tags
+      const questionsWithTags = {
         ...question,
         tags: await processTags(question.tags),
       };
-
-      if (questionswithtags.tags.length === 0) {
+      if (questionsWithTags.tags.length === 0) {
         throw new Error('Invalid tags');
       }
 
-      // Save the question and broadcast updates
-      const result = await saveQuestion(questionswithtags, socket);
+      // Save the question (and update user points/leaderboard)
+      const result = await saveQuestion(questionsWithTags, socket);
       if ('error' in result) {
         throw new Error(result.error);
       }
 
-      // Populate the new question document and cast it as a PopulatedDatabaseQuestion
+      // Populate the newly created question
       const populatedQuestion = (await populateDocument(
         result._id.toString(),
         'question',
       )) as PopulatedDatabaseQuestion;
+
       if ('error' in populatedQuestion) {
         throw new Error(String(populatedQuestion.error));
       }
 
-      // Update user preferences for asking a question (+1 per tag)
+      // Update user preferences (+1 for each tag)
       const voteImpact = 1;
       const updates = populatedQuestion.tags
         .map((tag: Tag) => {
@@ -177,48 +178,51 @@ const questionController = (socket: FakeSOSocket) => {
         await updateUserPreferences(userRecord._id.toString(), updates);
       }
 
+      // Emit an event and send the question back in the response
       socket.emit('questionUpdate', populatedQuestion);
       res.json(populatedQuestion);
 
-      // ----- NEW: Trigger AI-generated answer asynchronously -----
+      // ----- If the user's AI toggle is on, generate an AI answer asynchronously -----
       if (userRecord && userRecord.aiToggler) {
-        // Build a prompt using the question's title and text
-        const prompt = `${populatedQuestion.title}\n\n${populatedQuestion.text}`;
+        // 1) Extract question details
+        const questionTitle = populatedQuestion.title;
+        const questionDescription = populatedQuestion.text;
+        const tagNames = populatedQuestion.tags.map(tg => tg.name);
 
-        // Call the Gemini API to generate an answer
-        getGeminiResponse(prompt)
-          .then(async (generatedText: string) => {
+        // 2) Call Gemini with title, description, and tag list
+        getGeminiResponse(questionTitle, questionDescription, tagNames)
+          .then(async (geminiText: string) => {
             try {
-              // Prepend the italicized label to the generated text
-              const aiAnswerText = `<em>AI-Generated Answer</em> ${generatedText}`;
+              // 3) Prepend an italicized label
+              const aiAnswerText = `${geminiText}`;
 
-              // Build the AI answer object. Ensure it has all required fields.
+              // 4) Build the new AI answer object (with all required fields)
               const aiAnswer = {
                 text: aiAnswerText,
                 ansBy: 'AI',
                 ansDateTime: new Date(),
                 upVotes: [] as string[],
                 downVotes: [] as string[],
+                // Possibly typed as Comment[] or any[] if needed
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 comments: [] as any[],
               };
 
-              // Save the AI-generated answer
+              // 5) Save the AI-generated answer
               const savedAiAnswer = await saveAnswer(aiAnswer);
               if (!('error' in savedAiAnswer)) {
-                // Attach the answer to the question thread
+                // 6) Attach the AI answer to the question
                 await addAnswerToQuestion(populatedQuestion._id.toString(), savedAiAnswer);
-                // Emit a custom event to update connected clients
+
+                // 7) Emit an event for the AI answer
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 (socket as any).emit('aiAnswerUpdate', savedAiAnswer);
               }
             } catch (error) {
-              console.error('Error saving AI-generated answer:', error);
+              /* empty */
             }
           })
-          .catch((error: unknown) => {
-            console.error('Error generating AI answer:', error);
-          });
+          .catch((error: unknown) => {});
       }
     } catch (err: unknown) {
       if (err instanceof Error) {
@@ -275,7 +279,12 @@ const questionController = (socket: FakeSOSocket) => {
 
       // --- Begin: Update the curious cat badge progress ---
       if (type === 'upvote' && status.upVotes.length === 1) {
-        await awardingBadgeHelper(username, BadgeName.CURIOUS_CAT, BadgeDescription.CURIOUS_CAT);
+        await awardingBadgeHelper(
+          username,
+          BadgeName.CURIOUS_CAT,
+          BadgeDescription.CURIOUS_CAT,
+          socket,
+        );
       }
       // --- End: Update the curious cat badge progress ---
 

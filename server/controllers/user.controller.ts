@@ -19,8 +19,8 @@ import {
   // 1) IMPORT the new leaderboard service functions:
   getTop10ByPoints,
   getRankForUser,
+  getPointsHistory,
 } from '../services/user.service';
-import { ObjectId } from 'mongodb';
 
 const userController = (socket: FakeSOSocket) => {
   const router: Router = express.Router();
@@ -62,6 +62,9 @@ const userController = (socket: FakeSOSocket) => {
       preferences: new Array(1000).fill(0),
       badges: [],
       aiToggler: true,
+      pointsHistory: [],
+      hideRanking: false,
+      lastActive: new Date(),
     };
 
     try {
@@ -307,6 +310,27 @@ const userController = (socket: FakeSOSocket) => {
   };
 
   /**
+   * GET /api/users/pointsHistory/:username
+   * Returns the points history for a specified user.
+   */
+  const getPointsHistoryHandler = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const { username } = req.params;
+      if (!username) {
+        res.status(400).send('Username parameter is required');
+        return;
+      }
+      const pointsHistory = await getPointsHistory(username);
+      if ('error' in pointsHistory) {
+        throw new Error(pointsHistory.error);
+      }
+      res.status(200).json(pointsHistory);
+    } catch (error) {
+      res.status(500).send(`Error retrieving points history: ${(error as Error).message}`);
+    }
+  };
+
+  /**
    * Updates a user's AI toggle setting.
    */
   const updateAIToggler = async (req: Request, res: Response): Promise<void> => {
@@ -346,6 +370,7 @@ const userController = (socket: FakeSOSocket) => {
   // Add the new leaderboard routes:
   router.get('/top10', getTop10);
   router.get('/leaderboard/user-rank', getUserRankHandler);
+  router.get('/pointsHistory/:username', getPointsHistoryHandler);
 
   return router;
 };
