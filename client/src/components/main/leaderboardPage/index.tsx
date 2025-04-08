@@ -4,7 +4,6 @@ import React, { useEffect, useState, useRef } from 'react';
 import { io, Socket } from 'socket.io-client';
 import './index.css';
 import BadgeComponent from './badgeComponent';
-import { Badge } from '../../../types/types';
 import useUserContext from '../../../hooks/useUserContext';
 
 // Define the LeaderboardUser interface inline

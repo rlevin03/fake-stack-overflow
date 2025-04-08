@@ -91,7 +91,7 @@ const answerController = (socket: FakeSOSocket) => {
       // Fetch the question to retrieve its tags
       const question = await QuestionModel.findById(qid).populate<{ tags: Tag[] }>('tags');
       if (!question) {
-        console.error('Question not found while updating preferences for answer.');
+        /* empty */
       } else {
         const updates = question.tags
           .map(tag => {

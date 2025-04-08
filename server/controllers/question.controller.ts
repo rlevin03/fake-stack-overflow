@@ -23,7 +23,7 @@ import {
 import { processTags } from '../services/tag.service';
 import { populateDocument } from '../utils/database.util';
 import { updateUserPreferences } from '../services/user.service';
-import { getGeminiResponse, getGeminiAutoComplete } from '../services/gemini.service';
+import { getGeminiResponse } from '../services/gemini.service';
 import { saveAnswer, addAnswerToQuestion } from '../services/answer.service';
 import QuestionModel from '../models/questions.model';
 import UserModel from '../models/users.model';
@@ -219,12 +219,10 @@ const questionController = (socket: FakeSOSocket) => {
                 (socket as any).emit('aiAnswerUpdate', savedAiAnswer);
               }
             } catch (error) {
-              console.error('Error saving AI-generated answer:', error);
+              /* empty */
             }
           })
-          .catch((error: unknown) => {
-            console.error('Error generating AI answer:', error);
-          });
+          .catch((error: unknown) => {});
       }
     } catch (err: unknown) {
       if (err instanceof Error) {

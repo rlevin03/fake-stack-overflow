@@ -119,84 +119,91 @@ const CollaborativeEditor: React.FC = () => {
     fetchSession();
   }, [codingSessionID]);
 
-  // Apply decorations for all edit highlights with error handling
-  const applyHighlightDecorations = () => {
-    if (!editorInstance) return;
+  useEffect(() => {
+    // Define applyHighlightDecorations inside useEffect
+    const applyHighlightDecorations = () => {
+      if (!editorInstance) return;
 
-    const model = editorInstance.getModel();
-    if (!model) return;
+      const model = editorInstance.getModel();
+      if (!model) return;
 
-    try {
-      const now = Date.now();
-      // Filter valid highlights - both by time and by line number validity
-      const validHighlights = editHighlights.filter(highlight => {
-        // Check if highlight is still within time window
-        const isRecent = now - highlight.timestamp < 3000;
+      try {
+        const now = Date.now();
+        // Filter valid highlights - both by time and by line number validity
+        const validHighlights = editHighlights.filter(highlight => {
+          // Check if highlight is still within time window
+          const isRecent = now - highlight.timestamp < 3000;
 
-        // Check if line number is valid for current model
-        const isValidLine =
-          typeof highlight.lineNumber === 'number' &&
-          highlight.lineNumber > 0 &&
-          highlight.lineNumber <= model.getLineCount();
+          // Check if line number is valid for current model
+          const isValidLine =
+            typeof highlight.lineNumber === 'number' &&
+            highlight.lineNumber > 0 &&
+            highlight.lineNumber <= model.getLineCount();
 
-        return isRecent && isValidLine;
-      });
-
-      // Create decorations only for valid highlights
-      const decorations: monaco.editor.IModelDeltaDecoration[] = validHighlights.map(highlight => {
-        try {
-          const maxColumn = model.getLineMaxColumn(highlight.lineNumber);
-          return {
-            range: new monaco.Range(
-              highlight.lineNumber,
-              1,
-              highlight.lineNumber,
-              maxColumn || 1, // Fallback to 1 if maxColumn is somehow 0
-            ),
-            options: {
-              inlineClassName: 'recent-edit',
-            },
-          };
-        } catch (err) {
-          // Broadcast error to all users
-          if (codingSessionID) {
-            socket.emit('editorError', {
-              codingSessionID,
-              errorMessage: `Error with line ${highlight.lineNumber}: Invalid line number`,
-            });
-          }
-
-          // Return a "safe" decoration that won't cause errors
-          return {
-            range: new monaco.Range(1, 1, 1, 1),
-            options: {
-              inlineClassName: 'recent-edit',
-            },
-          };
-        }
-      });
-
-      // Apply decorations safely
-      highlightDecorationsRef.current = editorInstance.deltaDecorations(
-        highlightDecorationsRef.current,
-        decorations,
-      );
-    } catch (err) {
-      // Broadcast error to all users
-      if (codingSessionID) {
-        socket.emit('editorError', {
-          codingSessionID,
-          errorMessage: 'Error applying highlight decorations',
+          return isRecent && isValidLine;
         });
-      }
 
-      // Reset decorations to clean state if we encounter an error
-      highlightDecorationsRef.current = editorInstance.deltaDecorations(
-        highlightDecorationsRef.current,
-        [],
-      );
-    }
-  };
+        // Create decorations only for valid highlights
+        const decorations: monaco.editor.IModelDeltaDecoration[] = validHighlights.map(
+          highlight => {
+            try {
+              const maxColumn = model.getLineMaxColumn(highlight.lineNumber);
+              return {
+                range: new monaco.Range(
+                  highlight.lineNumber,
+                  1,
+                  highlight.lineNumber,
+                  maxColumn || 1, // Fallback to 1 if maxColumn is somehow 0
+                ),
+                options: {
+                  inlineClassName: 'recent-edit',
+                },
+              };
+            } catch (err) {
+              // Broadcast error to all users
+              if (codingSessionID) {
+                socket.emit('editorError', {
+                  codingSessionID,
+                  errorMessage: `Error with line ${highlight.lineNumber}: Invalid line number`,
+                });
+              }
+
+              // Return a "safe" decoration that won't cause errors
+              return {
+                range: new monaco.Range(1, 1, 1, 1),
+                options: {
+                  inlineClassName: 'recent-edit',
+                },
+              };
+            }
+          },
+        );
+
+        // Apply decorations safely
+        highlightDecorationsRef.current = editorInstance.deltaDecorations(
+          highlightDecorationsRef.current,
+          decorations,
+        );
+      } catch (err) {
+        // Broadcast error to all users
+        if (codingSessionID) {
+          socket.emit('editorError', {
+            codingSessionID,
+            errorMessage: 'Error applying highlight decorations',
+          });
+        }
+
+        // Reset decorations to clean state if we encounter an error
+        highlightDecorationsRef.current = editorInstance.deltaDecorations(
+          highlightDecorationsRef.current,
+          [],
+        );
+      }
+    };
+
+    // Call the function
+    applyHighlightDecorations();
+  }, [editorInstance, editHighlights, codingSessionID]);
 
   // Clean up expired highlights
   useEffect(() => {
@@ -207,11 +214,6 @@ const CollaborativeEditor: React.FC = () => {
 
     return () => clearInterval(cleanupInterval);
   }, []);
-
-  // Update decorations whenever editHighlights changes
-  useEffect(() => {
-    applyHighlightDecorations();
-  }, [editHighlights]);
 
   // Socket event handling.
   useEffect(() => {

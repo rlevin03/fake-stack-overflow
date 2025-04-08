@@ -54,7 +54,6 @@ const InterestsCard: React.FC = () => {
       setUser(updatedUser);
       setMessage('Interests updated successfully.');
     } catch (err) {
-      console.error('Error updating preferences:', err);
       setMessage('Error updating interests.');
     }
   };

@@ -1,4 +1,3 @@
-import { Types } from 'mongoose';
 import SessionModel from '../models/sessions.model';
 import UserModel from '../models/users.model';
 import { DatabaseSession, SessionResponse, SessionsResponse } from '../types/types';

@@ -14,45 +14,65 @@ const socket: Socket = io('http://localhost:8000');
 // Helper function to get the top 10 leaderboard using websockets.
 export async function getTop10Leaderboard(): Promise<LeaderboardUser[]> {
   return new Promise((resolve, reject) => {
-    // Emit the event to request top 10 leaderboard.
-    socket.emit('getTop10');
+    // Create references to hold our listener functions
+    let responseListener: (data: LeaderboardUser[]) => void;
+    let errorListener: (msg: string) => void;
 
-    // Response handler: Remove error listener and resolve.
-    const onResponse = (data: LeaderboardUser[]) => {
-      socket.off('error', onError);
+    // Create function to clean up listeners
+    const cleanupListeners = () => {
+      socket.off('top10Response', responseListener);
+      socket.off('error', errorListener);
+    };
+
+    // Define listeners that don't directly reference each other
+    responseListener = (data: LeaderboardUser[]) => {
+      cleanupListeners();
       resolve(data);
     };
 
-    // Error handler: Remove response listener and reject.
-    const onError = (msg: string) => {
-      socket.off('top10Response', onResponse);
+    errorListener = (msg: string) => {
+      cleanupListeners();
       reject(new Error(msg));
     };
 
-    socket.once('top10Response', onResponse);
-    socket.once('error', onError);
+    // Emit the event to request top 10 leaderboard.
+    socket.emit('getTop10');
+
+    // Register listeners
+    socket.once('top10Response', responseListener);
+    socket.once('error', errorListener);
   });
 }
 
 // Helper function to get a user's rank using websockets.
 export async function getUserRank(username: string): Promise<number> {
   return new Promise((resolve, reject) => {
-    // Emit the event with the username.
-    socket.emit('getUserRank', { username });
+    // Create references to hold our listener functions
+    let responseListener: (data: { rank: number }) => void;
+    let errorListener: (msg: string) => void;
 
-    // Response handler: Remove error listener and resolve.
-    const onResponse = (data: { rank: number }) => {
-      socket.off('error', onError);
+    // Create function to clean up listeners
+    const cleanupListeners = () => {
+      socket.off('userRankResponse', responseListener);
+      socket.off('error', errorListener);
+    };
+
+    // Define listeners that don't directly reference each other
+    responseListener = (data: { rank: number }) => {
+      cleanupListeners();
       resolve(data.rank);
     };
 
-    // Error handler: Remove response listener and reject.
-    const onError = (msg: string) => {
-      socket.off('userRankResponse', onResponse);
+    errorListener = (msg: string) => {
+      cleanupListeners();
       reject(new Error(msg));
     };
 
-    socket.once('userRankResponse', onResponse);
-    socket.once('error', onError);
+    // Emit the event with the username.
+    socket.emit('getUserRank', { username });
+
+    // Register listeners
+    socket.once('userRankResponse', responseListener);
+    socket.once('error', errorListener);
   });
 }

@@ -5,17 +5,9 @@ import './index.css';
 import useProfileSettings from '../../hooks/useProfileSettings';
 import InterestsCard from './InterestsCard';
 
-interface UserData {
-  username: string;
-  biography?: string;
-  dateJoined?: string;
-  // Add other fields as needed...
-}
-
 const ProfileSettings: React.FC = () => {
   const {
     userData,
-    loading,
     editBioMode,
     newBio,
     newPassword,

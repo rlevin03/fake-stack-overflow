@@ -13,7 +13,6 @@ const InterestsSelection = () => {
 
   const handleSubmit = async () => {
     if (!user) {
-      console.error('No user found in context');
       return;
     }
 
@@ -30,7 +29,7 @@ const InterestsSelection = () => {
       setUser(updatedUser);
       navigate('/home');
     } catch (err) {
-      console.error('Error updating preferences:', err);
+      /* empty */
     }
   };
 
