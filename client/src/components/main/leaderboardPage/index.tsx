@@ -35,7 +35,6 @@ const LeaderboardPage: React.FC = () => {
     };
 
     const userRankListener = (data: { rank: number }) => {
-      console.log('Received user rank:', data);
       setUserRank(data.rank);
     };
 
