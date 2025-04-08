@@ -24,7 +24,7 @@ const TagSelector: React.FC<TagSelectorProps> = ({
   useEffect(() => {
     getPredefinedTags()
       .then(tags => setAllTags(tags))
-      .catch(err => console.error('Error fetching tags:', err));
+      .catch(err => {});
   }, []);
 
   // Filter tags: if filterText is empty, show all; else filter by tag name.

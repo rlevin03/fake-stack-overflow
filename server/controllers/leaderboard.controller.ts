@@ -12,8 +12,9 @@ const leaderboardController = (socket: FakeSOSocket) => {
       const top10 = await getTop10ByPoints();
       if ('error' in top10) throw new Error(top10.error);
       res.status(200).json(top10);
-    } catch (error: any) {
-      res.status(500).send(`Error when getting top 10: ${error.message}`);
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      res.status(500).send(`Error when getting top 10: ${errorMessage}`);
     }
   });
 
@@ -28,23 +29,23 @@ const leaderboardController = (socket: FakeSOSocket) => {
       const rankResult = await getRankForUser(username);
       if ('error' in rankResult) throw new Error(rankResult.error);
       res.status(200).json(rankResult);
-    } catch (error: any) {
-      res.status(500).send(`Error when getting user rank: ${error.message}`);
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      res.status(500).send(`Error when getting user rank: ${errorMessage}`);
     }
   });
 
   // WebSocket event handlers for leaderboard
-  socket.on('connection', (conn) => {
-    console.log('Leaderboard WS connection:', conn.id);
-
+  socket.on('connection', conn => {
     // Handle request for top 10 leaderboard via WebSocket
     conn.on('getTop10', async () => {
       try {
         const top10 = await getTop10ByPoints();
         if ('error' in top10) throw new Error(top10.error);
         conn.emit('top10Response', top10);
-      } catch (error: any) {
-        conn.emit('error', `Error when getting top 10: ${error.message}`);
+      } catch (error: unknown) {
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+        conn.emit('error', `Error when getting top 10: ${errorMessage}`);
       }
     });
 
@@ -58,8 +59,9 @@ const leaderboardController = (socket: FakeSOSocket) => {
         const rankResult = await getRankForUser(data.username);
         if ('error' in rankResult) throw new Error(rankResult.error);
         conn.emit('userRankResponse', rankResult);
-      } catch (error: any) {
-        conn.emit('error', `Error when getting user rank: ${error.message}`);
+      } catch (error: unknown) {
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+        conn.emit('error', `Error when getting user rank: ${errorMessage}`);
       }
     });
   });

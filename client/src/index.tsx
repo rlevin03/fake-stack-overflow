@@ -12,7 +12,6 @@ const App = () => {
   const [socket, setSocket] = useState<FakeSOSocket | null>(null);
 
   const serverURL = process.env.REACT_APP_SERVER_URL;
-  console.log('serverURL', serverURL);
 
   if (serverURL === undefined) {
     throw new Error("Environment variable 'REACT_APP_SERVER_URL' must be defined");

@@ -1,5 +1,4 @@
 import express, { Request, Response } from 'express';
-import { BadgeRequest } from '../types/types';
 import { getBadgesByIds } from '../services/badge.service';
 
 const badgeController = () => {

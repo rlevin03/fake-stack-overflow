@@ -14,11 +14,10 @@ const CollaborativeSession: React.FC = () => {
    */
   const handleCreateSession = async (): Promise<void> => {
     try {
-      console.log('Creating session...');
       const newSession: DatabaseSession = await createSession();
       navigate(`/sessions/${newSession._id.toString()}`);
     } catch (err) {
-      console.error(err);
+      /* empty */
     }
   };
 

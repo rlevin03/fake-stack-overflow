@@ -64,7 +64,7 @@ const useQuestionPage = () => {
           setQlist(res || []);
         }
       } catch (error) {
-        console.error(error);
+        /* empty */
       }
     };
 
@@ -118,7 +118,7 @@ const useQuestionPage = () => {
       socket.off('answerUpdate', handleAnswerUpdate);
       socket.off('viewsUpdate', handleViewsUpdate);
     };
-  }, [questionOrder, search, socket]);
+  }, [questionOrder, search, socket, user]);
 
   return { titleText, qlist, setQuestionOrder };
 };
