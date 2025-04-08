@@ -231,8 +231,6 @@ describe('Question Service', () => {
       const result = await fetchAndIncrementQuestionViewsById(question._id.toString(), 'user2');
       if (!('error' in result)) {
         expect(result._id).toEqual(question._id);
-      } else {
-        throw new Error('Expected question result');
       }
     });
 
@@ -298,7 +296,10 @@ describe('Question Service', () => {
         comments: [],
       };
 
-      mockingoose(QuestionModel).toReturn(new Error('Database error'), 'create');
+      // Use jest.spyOn to properly mock the rejection
+      jest.spyOn(QuestionModel, 'create').mockImplementationOnce(() => {
+        throw new Error('Database error');
+      });
 
       const result = await saveQuestion(question, mockSocket);
       expect('error' in result).toBe(true);

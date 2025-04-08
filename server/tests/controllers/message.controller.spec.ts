@@ -1,11 +1,55 @@
 import mongoose from 'mongoose';
 import supertest from 'supertest';
-import { app } from '../../app';
+import express from 'express';
+import { createServer, Server as HttpServer } from 'http';
+import { Server } from 'socket.io';
 import * as util from '../../services/message.service';
-import { DatabaseMessage, Message } from '../../types/types';
+import { DatabaseMessage, FakeSOSocket, Message } from '../../types/types';
+import messageController from '../../controllers/message.controller';
 
 const saveMessageSpy = jest.spyOn(util, 'saveMessage');
 const getMessagesSpy = jest.spyOn(util, 'getMessages');
+
+// Create test app with express
+const app = express();
+let httpServer: HttpServer;
+let testServer: any; // Using any temporarily to avoid supertest typing issues
+
+// Create a proper mock that satisfies the FakeSOSocket type
+const mockEmit = jest.fn();
+const mockSocket = {
+  emit: mockEmit,
+} as unknown as FakeSOSocket;
+
+// Setup before all tests
+beforeAll(done => {
+  httpServer = createServer(app);
+
+  // Initialize the message controller with the socket
+  app.use(express.json());
+  app.use('/messaging', messageController(mockSocket));
+
+  // Start the server on a random port
+  httpServer.listen(0, () => {
+    testServer = supertest(httpServer);
+    done();
+  });
+});
+
+// Cleanup after all tests
+afterAll(done => {
+  if (httpServer) {
+    httpServer.close(done);
+  } else {
+    done();
+  }
+});
+
+// Reset mocks before each test
+beforeEach(() => {
+  jest.clearAllMocks();
+  mockEmit.mockClear();
+});
 
 describe('POST /addMessage', () => {
   it('should add a new message', async () => {
@@ -25,7 +69,7 @@ describe('POST /addMessage', () => {
 
     saveMessageSpy.mockResolvedValue(message);
 
-    const response = await supertest(app)
+    const response = await testServer
       .post('/messaging/addMessage')
       .send({ messageToAdd: requestMessage });
 
@@ -37,13 +81,24 @@ describe('POST /addMessage', () => {
       msgDateTime: message.msgDateTime.toISOString(),
       type: 'global',
     });
+
+    // Verify that the socket emit was called with the correct parameters
+    expect(mockEmit).toHaveBeenCalledWith('messageUpdate', {
+      msg: expect.objectContaining({
+        _id: expect.any(mongoose.Types.ObjectId),
+        msg: 'Hello',
+        msgFrom: 'User1',
+        type: 'global',
+      }),
+    });
   });
 
   it('should return bad request error if messageToAdd is missing', async () => {
-    const response = await supertest(app).post('/messaging/addMessage').send({});
+    const response = await testServer.post('/messaging/addMessage').send({});
 
     expect(response.status).toBe(400);
     expect(response.text).toBe('Invalid request');
+    expect(mockEmit).not.toHaveBeenCalled();
   });
 
   it('should return bad message body error if msg is empty', async () => {
@@ -53,12 +108,13 @@ describe('POST /addMessage', () => {
       msgDateTime: new Date('2024-06-04'),
     };
 
-    const response = await supertest(app)
+    const response = await testServer
       .post('/messaging/addMessage')
       .send({ messageToAdd: badMessage });
 
     expect(response.status).toBe(400);
     expect(response.text).toBe('Invalid message body');
+    expect(mockEmit).not.toHaveBeenCalled();
   });
 
   it('should return bad message body error if msg is missing', async () => {
@@ -67,12 +123,13 @@ describe('POST /addMessage', () => {
       msgDateTime: new Date('2024-06-04'),
     };
 
-    const response = await supertest(app)
+    const response = await testServer
       .post('/messaging/addMessage')
       .send({ messageToAdd: badMessage });
 
     expect(response.status).toBe(400);
     expect(response.text).toBe('Invalid message body');
+    expect(mockEmit).not.toHaveBeenCalled();
   });
 
   it('should return bad message body error if msgFrom is empty', async () => {
@@ -82,12 +139,13 @@ describe('POST /addMessage', () => {
       msgDateTime: new Date('2024-06-04'),
     };
 
-    const response = await supertest(app)
+    const response = await testServer
       .post('/messaging/addMessage')
       .send({ messageToAdd: badMessage });
 
     expect(response.status).toBe(400);
     expect(response.text).toBe('Invalid message body');
+    expect(mockEmit).not.toHaveBeenCalled();
   });
 
   it('should return bad message body error if msgFrom is missing', async () => {
@@ -96,12 +154,13 @@ describe('POST /addMessage', () => {
       msgDateTime: new Date('2024-06-04'),
     };
 
-    const response = await supertest(app)
+    const response = await testServer
       .post('/messaging/addMessage')
       .send({ messageToAdd: badMessage });
 
     expect(response.status).toBe(400);
     expect(response.text).toBe('Invalid message body');
+    expect(mockEmit).not.toHaveBeenCalled();
   });
 
   it('should return bad message body error if msgDateTime is missing', async () => {
@@ -110,12 +169,13 @@ describe('POST /addMessage', () => {
       msgFrom: 'User1',
     };
 
-    const response = await supertest(app)
+    const response = await testServer
       .post('/messaging/addMessage')
       .send({ messageToAdd: badMessage });
 
     expect(response.status).toBe(400);
     expect(response.text).toBe('Invalid message body');
+    expect(mockEmit).not.toHaveBeenCalled();
   });
 
   it('should return bad message body error if msgDateTime is null', async () => {
@@ -125,12 +185,13 @@ describe('POST /addMessage', () => {
       msgDateTime: null,
     };
 
-    const response = await supertest(app)
+    const response = await testServer
       .post('/messaging/addMessage')
       .send({ messageToAdd: badMessage });
 
     expect(response.status).toBe(400);
     expect(response.text).toBe('Invalid message body');
+    expect(mockEmit).not.toHaveBeenCalled();
   });
 
   it('should return internal server error if saveMessage fails', async () => {
@@ -144,12 +205,11 @@ describe('POST /addMessage', () => {
 
     saveMessageSpy.mockResolvedValue({ error: 'Error saving document' });
 
-    const response = await supertest(app)
-      .post('/messaging/addMessage')
-      .send({ messageToAdd: message });
+    const response = await testServer.post('/messaging/addMessage').send({ messageToAdd: message });
 
     expect(response.status).toBe(500);
     expect(response.text).toBe('Error when adding a message: Error saving document');
+    expect(mockEmit).not.toHaveBeenCalled();
   });
 });
 
@@ -181,7 +241,7 @@ describe('GET /getMessages', () => {
 
     getMessagesSpy.mockResolvedValue([dbMessage1, dbMessage2]);
 
-    const response = await supertest(app).get('/messaging/getMessages');
+    const response = await testServer.get('/messaging/getMessages');
 
     expect(response.status).toBe(200);
     expect(response.body).toEqual([

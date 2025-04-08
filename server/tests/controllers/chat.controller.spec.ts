@@ -1,15 +1,15 @@
 import mongoose from 'mongoose';
 import supertest from 'supertest';
 import { Server, type Socket as ServerSocket } from 'socket.io';
-import { createServer } from 'http';
+import { createServer, Server as HttpServer } from 'http';
 import { io as Client, type Socket as ClientSocket } from 'socket.io-client';
 import { AddressInfo } from 'net';
-import { app } from '../../app';
+import express from 'express';
+import chatController from '../../controllers/chat.controller';
 import * as messageService from '../../services/message.service';
 import * as chatService from '../../services/chat.service';
 import * as databaseUtil from '../../utils/database.util';
-import { DatabaseChat, PopulatedDatabaseChat, Message } from '../../types/types';
-import chatController from '../../controllers/chat.controller';
+import { DatabaseChat, PopulatedDatabaseChat, Message, FakeSOSocket } from '../../types/types';
 
 /**
  * Spies on the service functions
@@ -21,6 +21,43 @@ const getChatSpy = jest.spyOn(chatService, 'getChat');
 const addParticipantSpy = jest.spyOn(chatService, 'addParticipantToChat');
 const populateDocumentSpy = jest.spyOn(databaseUtil, 'populateDocument');
 const getChatsByParticipantsSpy = jest.spyOn(chatService, 'getChatsByParticipants');
+
+// Create test app with express
+const app = express();
+let server: HttpServer;
+let testServer: any; // Using any temporarily to avoid supertest typing issues
+
+// Setup before all tests
+beforeAll(done => {
+  server = createServer(app);
+
+  // Create socket.io server for chat controller
+  const io = new Server(server);
+
+  // Initialize the chat controller with the socket
+  app.use(express.json());
+  app.use('/chat', chatController(io));
+
+  // Start the server on a random port
+  server.listen(0, () => {
+    testServer = supertest(server);
+    done();
+  });
+});
+
+// Cleanup after all tests
+afterAll(done => {
+  if (server) {
+    server.close(done);
+  } else {
+    done();
+  }
+});
+
+// Reset mocks before each test
+beforeEach(() => {
+  jest.clearAllMocks();
+});
 
 /**
  * Sample test suite for the /chat endpoints
@@ -73,7 +110,7 @@ describe('Chat Controller', () => {
       saveChatSpy.mockResolvedValue(chatResponse);
       populateDocumentSpy.mockResolvedValue(populatedChatResponse);
 
-      const response = await supertest(app).post('/chat/createChat').send(validChatPayload);
+      const response = await testServer.post('/chat/createChat').send(validChatPayload);
 
       expect(response.status).toBe(200);
 
@@ -104,7 +141,7 @@ describe('Chat Controller', () => {
         messages: [],
       };
 
-      const response = await supertest(app).post('/chat/createChat').send(invalidPayload);
+      const response = await testServer.post('/chat/createChat').send(invalidPayload);
 
       expect(response.status).toBe(400);
       expect(response.text).toBe('Invalid chat creation request');
@@ -113,12 +150,10 @@ describe('Chat Controller', () => {
     it('should return 500 on service error', async () => {
       saveChatSpy.mockResolvedValue({ error: 'Service error' });
 
-      const response = await supertest(app)
-        .post('/chat/createChat')
-        .send({
-          participants: ['user1'],
-          messages: [],
-        });
+      const response = await testServer.post('/chat/createChat').send({
+        participants: ['user1'],
+        messages: [],
+      });
 
       expect(response.status).toBe(500);
       expect(response.text).toBe('Error creating a chat: Service error');
@@ -169,7 +204,7 @@ describe('Chat Controller', () => {
       addMessageSpy.mockResolvedValue(chatResponse);
       populateDocumentSpy.mockResolvedValue(populatedChatResponse);
 
-      const response = await supertest(app).post(`/chat/${chatId}/addMessage`).send(messagePayload);
+      const response = await testServer.post(`/chat/${chatId}/addMessage`).send(messagePayload);
 
       expect(response.status).toBe(200);
       expect(response.body).toMatchObject({
@@ -204,7 +239,7 @@ describe('Chat Controller', () => {
         msgFrom: 'user1',
         msgDateTime: new Date('2025-01-01'),
       };
-      const response1 = await supertest(app).post(`/chat/${chatId}/addMessage`).send(missingMsg);
+      const response1 = await testServer.post(`/chat/${chatId}/addMessage`).send(missingMsg);
       expect(response1.status).toBe(400);
 
       // Test missing msgFrom
@@ -212,7 +247,7 @@ describe('Chat Controller', () => {
         msg: 'Hello!',
         msgDateTime: new Date('2025-01-01'),
       };
-      const response2 = await supertest(app).post(`/chat/${chatId}/addMessage`).send(missingFrom);
+      const response2 = await testServer.post(`/chat/${chatId}/addMessage`).send(missingFrom);
       expect(response2.status).toBe(400);
     });
 
@@ -232,7 +267,7 @@ describe('Chat Controller', () => {
       addMessageSpy.mockResolvedValue({ error: 'Error updating chat' });
 
       // 3) Invoke the endpoint with valid body
-      const response = await supertest(app).post(`/chat/${chatId}/addMessage`).send({
+      const response = await testServer.post(`/chat/${chatId}/addMessage`).send({
         msg: 'Hello',
         msgFrom: 'UserX',
         msgDateTime: new Date().toISOString(),
@@ -255,7 +290,7 @@ describe('Chat Controller', () => {
       // Mock createMessageSpy to return an object with _id as undefined
       saveMessageSpy.mockResolvedValue({ error: 'Error saving message' });
 
-      const response = await supertest(app).post(`/chat/${chatId}/addMessage`).send(messagePayload);
+      const response = await testServer.post(`/chat/${chatId}/addMessage`).send(messagePayload);
 
       expect(response.status).toBe(500);
       expect(response.text).toContain('Error adding a message to chat: Error saving message');
@@ -277,7 +312,7 @@ describe('Chat Controller', () => {
       addMessageSpy.mockResolvedValueOnce({ error: 'Error updating chat' });
 
       // Call the endpoint
-      const response = await supertest(app).post(`/chat/${chatId}/addMessage`).send(messagePayload);
+      const response = await testServer.post(`/chat/${chatId}/addMessage`).send(messagePayload);
 
       // Validate the response
       expect(response.status).toBe(500);
@@ -300,7 +335,7 @@ describe('Chat Controller', () => {
       // Mock populateDocument to return an error
       populateDocumentSpy.mockResolvedValue({ error: 'Error populating chat' });
 
-      const response = await supertest(app).get(`/chat/${chatId}`);
+      const response = await testServer.get(`/chat/${chatId}`);
 
       expect(response.status).toBe(500);
       expect(response.text).toContain('Error populating chat');
@@ -314,7 +349,7 @@ describe('Chat Controller', () => {
       const chatId = new mongoose.Types.ObjectId().toString();
       const messagePayload = { msg: 'Hello!', msgFrom: 'user1', msgDateTime: new Date() };
 
-      const response = await supertest(app).post(`/chat/${chatId}/addMessage`).send(messagePayload);
+      const response = await testServer.post(`/chat/${chatId}/addMessage`).send(messagePayload);
 
       expect(response.status).toBe(500);
       expect(response.text).toBe('Error adding a message to chat: Service error');
@@ -360,7 +395,7 @@ describe('Chat Controller', () => {
       populateDocumentSpy.mockResolvedValue(mockPopulatedChat);
 
       // 4) Invoke the endpoint
-      const response = await supertest(app).get(`/chat/${chatId}`);
+      const response = await testServer.get(`/chat/${chatId}`);
 
       // 5) Assertions
       expect(response.status).toBe(200);
@@ -390,7 +425,7 @@ describe('Chat Controller', () => {
       const chatId = new mongoose.Types.ObjectId().toString();
       getChatSpy.mockResolvedValue({ error: 'Service error' });
 
-      const response = await supertest(app).get(`/chat/${chatId}`);
+      const response = await testServer.get(`/chat/${chatId}`);
 
       expect(response.status).toBe(500);
       expect(response.text).toBe('Error retrieving chat: Service error');
@@ -421,7 +456,7 @@ describe('Chat Controller', () => {
       addParticipantSpy.mockResolvedValue(updatedChat);
       populateDocumentSpy.mockResolvedValue(populatedUpdatedChat);
 
-      const response = await supertest(app)
+      const response = await testServer
         .post(`/chat/${chatId}/addParticipant`)
         .send({ username: userId });
 
@@ -440,7 +475,7 @@ describe('Chat Controller', () => {
 
     it('should return 400 if userId is missing', async () => {
       const chatId = new mongoose.Types.ObjectId().toString();
-      const response = await supertest(app).post(`/chat/${chatId}/addParticipant`).send({}); // Missing userId
+      const response = await testServer.post(`/chat/${chatId}/addParticipant`).send({}); // Missing userId
 
       expect(response.status).toBe(400);
       expect(response.text).toBe('Missing chatId or userId');
@@ -452,7 +487,7 @@ describe('Chat Controller', () => {
 
       addParticipantSpy.mockResolvedValue({ error: 'Service error' });
 
-      const response = await supertest(app)
+      const response = await testServer
         .post(`/chat/${chatId}/addParticipant`)
         .send({ username: userId });
 
@@ -488,7 +523,7 @@ describe('Chat Controller', () => {
       getChatsByParticipantsSpy.mockResolvedValueOnce(chats);
       populateDocumentSpy.mockResolvedValueOnce(populatedChats[0]);
 
-      const response = await supertest(app).get(`/chat/getChatsByUser/${username}`);
+      const response = await testServer.get(`/chat/getChatsByUser/${username}`);
 
       expect(getChatsByParticipantsSpy).toHaveBeenCalledWith([username]);
       expect(populateDocumentSpy).toHaveBeenCalledWith(populatedChats[0]._id.toString(), 'chat');
@@ -519,7 +554,7 @@ describe('Chat Controller', () => {
       getChatsByParticipantsSpy.mockResolvedValueOnce(chats);
       populateDocumentSpy.mockResolvedValueOnce({ error: 'Service error' });
 
-      const response = await supertest(app).get(`/chat/getChatsByUser/${username}`);
+      const response = await testServer.get(`/chat/getChatsByUser/${username}`);
 
       expect(getChatsByParticipantsSpy).toHaveBeenCalledWith([username]);
       expect(populateDocumentSpy).toHaveBeenCalledWith(chats[0]._id.toString(), 'chat');
@@ -529,53 +564,81 @@ describe('Chat Controller', () => {
   });
 
   describe('Socket handlers', () => {
-    let io: Server;
-    let serverSocket: ServerSocket;
+    let socketServer: FakeSOSocket;
     let clientSocket: ClientSocket;
+    let socketHttpServer: HttpServer;
 
     beforeAll(done => {
-      const httpServer = createServer();
-      io = new Server(httpServer);
-      chatController(io);
+      // Create separate server for socket tests
+      socketHttpServer = createServer();
+      socketServer = new Server(socketHttpServer) as FakeSOSocket;
 
-      httpServer.listen(() => {
-        const { port } = httpServer.address() as AddressInfo;
+      // Attach chat controller to the socket server
+      chatController(socketServer);
+
+      // Start the server on a random port
+      socketHttpServer.listen(() => {
+        const { port } = socketHttpServer.address() as AddressInfo;
+        // Connect the client socket
         clientSocket = Client(`http://localhost:${port}`);
-        io.on('connection', socket => {
-          serverSocket = socket;
-        });
         clientSocket.on('connect', done);
       });
     });
 
-    afterAll(() => {
-      clientSocket.disconnect();
-      serverSocket.disconnect();
-      io.close();
+    afterAll(done => {
+      if (clientSocket) {
+        clientSocket.disconnect();
+      }
+
+      if (socketServer) {
+        socketServer.close();
+      }
+
+      if (socketHttpServer) {
+        socketHttpServer.close(done);
+      } else {
+        done();
+      }
     });
 
     it('should join a chat room when "joinChat" event is emitted', done => {
-      serverSocket.on('joinChat', arg => {
-        expect(io.sockets.adapter.rooms.has('chat123')).toBeTruthy();
-        expect(arg).toBe('chat123');
+      // Listen for joinChat event
+      const chatId = 'chat123';
+
+      clientSocket.emit('joinChat', chatId);
+
+      // Wait for the next tick to verify the room
+      setTimeout(() => {
+        // Check if the client is in room
+        const clientInRoom = socketServer.sockets.adapter.rooms.has(chatId);
+        expect(clientInRoom).toBeTruthy();
         done();
-      });
-      clientSocket.emit('joinChat', 'chat123');
+      }, 100);
     });
 
     it('should leave a chat room when "leaveChat" event is emitted', done => {
-      serverSocket.on('joinChat', arg => {
-        expect(io.sockets.adapter.rooms.has('chat123')).toBeTruthy();
-        expect(arg).toBe('chat123');
-      });
-      serverSocket.on('leaveChat', arg => {
-        expect(io.sockets.adapter.rooms.has('chat123')).toBeFalsy();
-        expect(arg).toBe('chat123');
-        done();
-      });
+      // Listen for leaveChat event
+      const chatId = 'chat456';
 
-      clientSocket.emit('joinChat', 'chat123');
-      clientSocket.emit('leaveChat', 'chat123');
+      // First join the room
+      clientSocket.emit('joinChat', chatId);
+
+      // Wait a bit to ensure joined
+      setTimeout(() => {
+        // Then leave the room
+        clientSocket.emit('leaveChat', chatId);
+
+        // Check if left the room
+        setTimeout(() => {
+          // The room should either not exist or not have the client
+          const hasRoom = socketServer.sockets.adapter.rooms.has(chatId);
+          const roomClients = socketServer.sockets.adapter.rooms.get(chatId);
+          const clientId = clientSocket.id || '';
+          const inRoom = hasRoom && roomClients && roomClients.has(clientId);
+          expect(inRoom).toBeFalsy();
+          done();
+        }, 100);
+      }, 100);
     });
   });
 });

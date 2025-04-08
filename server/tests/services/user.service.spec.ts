@@ -12,6 +12,9 @@ import {
   getRankForUser,
   updateUserPreferences,
   getUserRecommendations,
+  appendPointsHistory,
+  getPointsHistory,
+  decayInactiveUserPoints,
 } from '../../services/user.service';
 import { SafeDatabaseUser, User, UserCredentials } from '../../types/types';
 import { user, safeUser } from '../mockData.models';
@@ -196,6 +199,9 @@ describe('updateUser', () => {
     badges: [],
     preferences: [],
     aiToggler: false,
+    pointsHistory: [],
+    hideRanking: false,
+    lastActive: new Date(),
   };
 
   const updates: Partial<User> = {
@@ -413,5 +419,427 @@ describe('getUserRecommendations', () => {
     const result = await getUserRecommendations(safeUser._id.toString());
 
     expect('error' in result).toBe(true);
+  });
+});
+
+describe('appendPointsHistory', () => {
+  beforeEach(() => {
+    mockingoose.resetAll();
+  });
+
+  it("should append a new history item to the user's pointsHistory", async () => {
+    const userWithHistory = {
+      ...safeUser,
+      pointsHistory: ['Initial points: 0'],
+    };
+    const updatedUserWithHistory = {
+      ...userWithHistory,
+      pointsHistory: [
+        ...userWithHistory.pointsHistory,
+        'Earned 10 points for answering a question',
+      ],
+    };
+
+    mockingoose(UserModel).toReturn(updatedUserWithHistory, 'findByIdAndUpdate');
+
+    const historyItem = 'Earned 10 points for answering a question';
+    const result = await appendPointsHistory(safeUser._id.toString(), historyItem);
+
+    if ('pointsHistory' in result) {
+      expect(result.pointsHistory).toContain(historyItem);
+      expect(result.pointsHistory.length).toBe(2);
+    }
+  });
+
+  it('should return an error if user is not found', async () => {
+    mockingoose(UserModel).toReturn(null, 'findByIdAndUpdate');
+
+    const historyItem = 'Earned 10 points for answering a question';
+    const result = await appendPointsHistory('nonexistentid', historyItem);
+
+    expect('error' in result).toBe(true);
+  });
+
+  it('should return an error if there is a database error', async () => {
+    mockingoose(UserModel).toReturn(new Error('Database error'), 'findByIdAndUpdate');
+
+    const historyItem = 'Earned 10 points for answering a question';
+    const result = await appendPointsHistory(safeUser._id.toString(), historyItem);
+
+    expect('error' in result).toBe(true);
+  });
+});
+
+describe('getPointsHistory', () => {
+  beforeEach(() => {
+    mockingoose.resetAll();
+  });
+
+  it('should return the points history for a user', async () => {
+    const pointsHistoryData = ['Initial points: 0', 'Earned 10 points for answering a question'];
+    const userWithHistory = {
+      ...safeUser,
+      pointsHistory: pointsHistoryData,
+    };
+
+    mockingoose(UserModel).toReturn(userWithHistory, 'findOne');
+
+    const result = await getPointsHistory(safeUser.username);
+
+    if (Array.isArray(result)) {
+      expect(result).toEqual(pointsHistoryData);
+      expect(result.length).toBe(2);
+    } else {
+      throw new Error('Expected an array of history items, got an error object');
+    }
+  });
+
+  it('should return an empty array if user has no points history', async () => {
+    const userWithoutHistory = {
+      ...safeUser,
+      pointsHistory: [],
+    };
+
+    mockingoose(UserModel).toReturn(userWithoutHistory, 'findOne');
+
+    const result = await getPointsHistory(safeUser.username);
+
+    if (Array.isArray(result)) {
+      expect(result).toEqual([]);
+      expect(result.length).toBe(0);
+    } else {
+      throw new Error('Expected an empty array, got an error object');
+    }
+  });
+
+  it('should return an error if user is not found', async () => {
+    mockingoose(UserModel).toReturn(null, 'findOne');
+
+    const result = await getPointsHistory('nonexistentuser');
+
+    expect('error' in result).toBe(true);
+  });
+
+  it('should return an error if there is a database error', async () => {
+    mockingoose(UserModel).toReturn(new Error('Database error'), 'findOne');
+
+    const result = await getPointsHistory(safeUser.username);
+
+    expect('error' in result).toBe(true);
+  });
+});
+
+describe('decayInactiveUserPoints', () => {
+  beforeEach(() => {
+    mockingoose.resetAll();
+    jest.useFakeTimers();
+    jest.setSystemTime(new Date('2024-04-15')); // Fixed current date for testing
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
+  it('should decay points for inactive users correctly', async () => {
+    // Create inactive users with different periods of inactivity
+    const sixtyDaysAgo = new Date('2024-02-15'); // Exactly 60 days ago
+    const ninetyDaysAgo = new Date('2024-01-16'); // 90 days ago (1 decay period)
+    const oneHundredTwentyDaysAgo = new Date('2023-12-17'); // 120 days ago (2 decay periods)
+
+    const inactiveUsers = [
+      { ...user, _id: new mongoose.Types.ObjectId(), points: 100, lastActive: sixtyDaysAgo },
+      { ...user, _id: new mongoose.Types.ObjectId(), points: 100, lastActive: ninetyDaysAgo },
+      {
+        ...user,
+        _id: new mongoose.Types.ObjectId(),
+        points: 100,
+        lastActive: oneHundredTwentyDaysAgo,
+      },
+    ];
+
+    // Mock the find and updateOne methods
+    mockingoose(UserModel).toReturn(inactiveUsers, 'find');
+
+    const updateOneSpy = jest
+      .spyOn(UserModel, 'updateOne')
+      .mockResolvedValue({ nModified: 1 } as any);
+
+    await decayInactiveUserPoints();
+
+    expect(updateOneSpy).toHaveBeenCalledTimes(3);
+
+    // Verify that calls were made with the correct point calculations
+    // Type assertion is necessary to avoid TypeScript errors
+    const updateCalls = updateOneSpy.mock.calls;
+
+    expect(
+      updateCalls.some(call => {
+        const updateQuery = call[1] as { $set?: { points: number } };
+        return updateQuery.$set && updateQuery.$set.points === 81;
+      }),
+    ).toBe(true);
+
+    expect(
+      updateCalls.some(call => {
+        const updateQuery = call[1] as { $set?: { points: number } };
+        return updateQuery.$set && updateQuery.$set.points === 72;
+      }),
+    ).toBe(true);
+
+    updateOneSpy.mockRestore();
+  });
+
+  it('should handle database errors gracefully', async () => {
+    // Mock find to throw an error
+    mockingoose(UserModel).toReturn(new Error('Database error'), 'find');
+
+    // This function should not throw any errors
+    await expect(decayInactiveUserPoints()).resolves.not.toThrow();
+  });
+
+  it('should not update users who are active within the 60-day threshold', async () => {
+    // Create a mix of active and inactive users
+    const thirtyDaysAgo = new Date('2024-03-16'); // Only 30 days ago (active)
+
+    const users = [
+      { ...user, _id: new mongoose.Types.ObjectId(), points: 100, lastActive: thirtyDaysAgo },
+    ];
+
+    mockingoose(UserModel).toReturn([], 'find');
+
+    const updateOneSpy = jest.spyOn(UserModel, 'updateOne');
+
+    await decayInactiveUserPoints();
+
+    // No user should be updated
+    expect(updateOneSpy).not.toHaveBeenCalled();
+
+    updateOneSpy.mockRestore();
+  });
+});
+
+// Test the formatError utility function
+describe('formatError utility', () => {
+  // We need to access the private formatError function
+  // Since it's not exported, we'll test it indirectly through a function that uses it
+
+  it('should format Error objects correctly', async () => {
+    // Mock a function that will fail with an Error object
+    jest.spyOn(UserModel, 'findOne').mockImplementationOnce(() => {
+      throw new Error('Test error message');
+    });
+
+    const result = await getUserByUsername('testuser');
+
+    expect('error' in result).toBe(true);
+    if ('error' in result) {
+      expect(result.error).toContain('Test error message');
+    }
+  });
+
+  it('should format non-Error objects correctly', async () => {
+    // Mock a function that will fail with a string
+    jest.spyOn(UserModel, 'findOne').mockImplementationOnce(() => {
+      throw 'String error message';
+    });
+
+    const result = await getUserByUsername('testuser');
+
+    expect('error' in result).toBe(true);
+    if ('error' in result) {
+      expect(result.error).toContain('String error message');
+    }
+  });
+});
+
+describe('saveUser edge cases', () => {
+  beforeEach(() => {
+    mockingoose.resetAll();
+  });
+
+  it('should throw an error when create returns null', async () => {
+    // Explicitly return null from the create operation
+    jest.spyOn(UserModel, 'create').mockResolvedValueOnce(null as any);
+
+    const result = await saveUser(user);
+
+    expect('error' in result).toBe(true);
+    if ('error' in result) {
+      expect(result.error).toContain('Failed to create user');
+    }
+  });
+});
+
+// Additional edge cases for updateUserPreferences
+describe('updateUserPreferences additional cases', () => {
+  beforeEach(() => {
+    mockingoose.resetAll();
+  });
+
+  it('should ignore preference updates with out-of-range indices', async () => {
+    const userWithPreferences = {
+      ...safeUser,
+      preferences: new Array(1000).fill(0),
+      save: jest.fn().mockResolvedValue(true),
+    };
+    mockingoose(UserModel).toReturn(userWithPreferences, 'findById');
+
+    // Include some valid and some invalid indices
+    const updates = [
+      { index: 5, value: 1 }, // Valid
+      { index: 999, value: 2 }, // Valid - boundary
+      { index: 1000, value: 3 }, // Invalid - too high
+      { index: -1, value: 4 }, // Invalid - negative
+    ];
+
+    const result = await updateUserPreferences(safeUser._id.toString(), updates);
+
+    if (!('error' in result)) {
+      // Valid indices should be updated
+      expect(result.preferences[5]).toBe(1);
+      expect(result.preferences[999]).toBe(2);
+
+      // Invalid indices should be ignored
+      expect(result.preferences.length).toBe(1000); // Length shouldn't change
+
+      // The save method should still be called once
+      expect(userWithPreferences.save).toHaveBeenCalledTimes(1);
+    }
+  });
+});
+
+// Additional edge cases for getUserRecommendations
+describe('getUserRecommendations additional cases', () => {
+  beforeEach(() => {
+    mockingoose.resetAll();
+  });
+
+  it('should handle empty tag vectors correctly', async () => {
+    // User with all zeros in preferences
+    const userWithZeroPreferences = {
+      ...safeUser,
+      preferences: new Array(1000).fill(0),
+    };
+    mockingoose(UserModel).toReturn(userWithZeroPreferences, 'findById');
+
+    // Mock a question with no tags (empty vector)
+    const mockQuestion = {
+      _id: new mongoose.Types.ObjectId(),
+      title: 'Test Question',
+      text: 'Test Question Text',
+      tags: [], // Empty tags array
+      answers: [],
+      comments: [],
+      views: [],
+    };
+
+    mockingoose(QuestionModel).toReturn([mockQuestion], 'find');
+
+    const result = await getUserRecommendations(safeUser._id.toString());
+
+    // Should return an array with the question and similarity of 0 (as both vectors are empty/all zeros)
+    if (Array.isArray(result)) {
+      expect(result).toHaveLength(1);
+      expect(result[0].similarity).toBe(0); // Zero similarity when both vectors are zero
+    }
+  });
+
+  it('should sort recommendations correctly, with viewed questions at the end', async () => {
+    // User with some preferences values
+    const userWithPreferences = {
+      ...safeUser,
+      preferences: new Array(1000).fill(0).map((_, i) => (i % 2 === 0 ? 1 : 0)), // Even indices have value 1
+      username: 'test-user',
+    };
+    mockingoose(UserModel).toReturn(userWithPreferences, 'findById');
+
+    // Mock questions with varying similarity and view status
+    const mockQuestions = [
+      {
+        _id: new mongoose.Types.ObjectId(),
+        title: 'Viewed High Similarity',
+        text: 'Question Text',
+        tags: [{ name: 'tag0' }, { name: 'tag2' }], // High similarity tags
+        answers: [],
+        comments: [],
+        views: ['test-user'], // Viewed by the test user
+      },
+      {
+        _id: new mongoose.Types.ObjectId(),
+        title: 'Unviewed Low Similarity',
+        text: 'Question Text',
+        tags: [{ name: 'tag1' }, { name: 'tag3' }], // Low similarity tags
+        answers: [],
+        comments: [],
+        views: [], // Not viewed
+      },
+      {
+        _id: new mongoose.Types.ObjectId(),
+        title: 'Unviewed High Similarity',
+        text: 'Question Text',
+        tags: [{ name: 'tag0' }, { name: 'tag2' }, { name: 'tag4' }], // High similarity tags
+        answers: [],
+        comments: [],
+        views: [], // Not viewed
+      },
+    ];
+
+    // Mock tagIndexMap for the test
+    jest.mock(
+      '@fake-stack-overflow/shared/tagIndexMap.json',
+      () => ({
+        tag0: 0,
+        tag1: 1,
+        tag2: 2,
+        tag3: 3,
+        tag4: 4,
+      }),
+      { virtual: true },
+    );
+
+    mockingoose(QuestionModel).toReturn(mockQuestions, 'find');
+
+    const result = await getUserRecommendations(safeUser._id.toString());
+
+    if (Array.isArray(result)) {
+      // Expect the unviewed high similarity question to come first
+      expect(result[0].question.title).toBe('Unviewed High Similarity');
+
+      // Expect the viewed high similarity question to come last, despite high similarity
+      expect(result[result.length - 1].question.title).toBe('Viewed High Similarity');
+    }
+  });
+
+  it('should handle nonexistent tag indices gracefully', async () => {
+    const userWithPreferences = {
+      ...safeUser,
+      preferences: new Array(1000).fill(1), // All preferences set to 1
+    };
+    mockingoose(UserModel).toReturn(userWithPreferences, 'findById');
+
+    // Mock a question with a tag that doesn't exist in the tagIndexMap
+    const mockQuestion = {
+      _id: new mongoose.Types.ObjectId(),
+      title: 'Question with Unknown Tag',
+      text: 'Question Text',
+      tags: [{ name: 'nonexistent-tag' }], // Tag not in the index map
+      answers: [],
+      comments: [],
+      views: [],
+    };
+
+    // Mock the tag index map to be empty
+    jest.mock('@fake-stack-overflow/shared/tagIndexMap.json', () => ({}), { virtual: true });
+
+    mockingoose(QuestionModel).toReturn([mockQuestion], 'find');
+
+    // Function should still work without errors
+    const result = await getUserRecommendations(safeUser._id.toString());
+
+    if (Array.isArray(result)) {
+      expect(result).toHaveLength(1);
+      // Similarity will be 0 since no tags matched
+      expect(result[0].similarity).toBe(0);
+    }
   });
 });

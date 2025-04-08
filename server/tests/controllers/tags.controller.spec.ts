@@ -1,13 +1,49 @@
 import supertest from 'supertest';
 import mongoose from 'mongoose';
-import { app } from '../../app';
+import express from 'express';
+import { createServer, Server as HttpServer } from 'http';
 import * as tagUtil from '../../services/tag.service';
 import TagModel from '../../models/tags.model';
 import { DatabaseTag, Tag } from '../../types/types';
+import tagController from '../../controllers/tag.controller';
 
 const getTagCountMapSpy: jest.SpyInstance = jest.spyOn(tagUtil, 'getTagCountMap');
 // Spy on the TagModel.findOne method
 const findOneSpy = jest.spyOn(TagModel, 'findOne');
+
+// Create test app with express
+const app = express();
+let httpServer: HttpServer;
+let testServer: any; // Using any temporarily to avoid supertest typing issues
+
+// Setup before all tests
+beforeAll(done => {
+  httpServer = createServer(app);
+
+  // Initialize the tag controller
+  app.use(express.json());
+  app.use('/tag', tagController());
+
+  // Start the server on a random port
+  httpServer.listen(0, () => {
+    testServer = supertest(httpServer);
+    done();
+  });
+});
+
+// Cleanup after all tests
+afterAll(done => {
+  if (httpServer) {
+    httpServer.close(done);
+  } else {
+    done();
+  }
+});
+
+// Reset mocks before each test
+beforeEach(() => {
+  jest.clearAllMocks();
+});
 
 describe('Test tagController', () => {
   describe('GET /getTagByName/:name', () => {
@@ -18,7 +54,7 @@ describe('Test tagController', () => {
 
       findOneSpy.mockResolvedValueOnce(mockDatabaseTag);
 
-      const response = await supertest(app).get('/tag/getTagByName/exampleTag');
+      const response = await testServer.get('/tag/getTagByName/exampleTag');
 
       expect(response.status).toBe(200);
       expect(response.body).toEqual({ ...mockDatabaseTag, _id: mockDatabaseTag._id.toString() });
@@ -28,7 +64,7 @@ describe('Test tagController', () => {
       // Mock findOne to return null to simulate tag not found
       findOneSpy.mockResolvedValueOnce(null);
 
-      const response = await supertest(app).get('/tag/getTagByName/nonExistentTag');
+      const response = await testServer.get('/tag/getTagByName/nonExistentTag');
 
       expect(response.status).toBe(404);
       expect(response.text).toBe('Tag with name "nonExistentTag" not found');
@@ -38,7 +74,7 @@ describe('Test tagController', () => {
       // Mock findOne to throw an error
       findOneSpy.mockRejectedValueOnce(new Error('Error fetching tag'));
 
-      const response = await supertest(app).get('/tag/getTagByName/errorTag');
+      const response = await testServer.get('/tag/getTagByName/errorTag');
 
       expect(response.status).toBe(500);
       expect(response.text).toContain('Error when fetching tag: Error fetching tag');
@@ -52,7 +88,7 @@ describe('Test tagController', () => {
       mockTagCountMap.set('tag2', 1);
       getTagCountMapSpy.mockResolvedValueOnce(mockTagCountMap);
 
-      const response = await supertest(app).get('/tag/getTagsWithQuestionNumber');
+      const response = await testServer.get('/tag/getTagsWithQuestionNumber');
 
       expect(response.status).toBe(200);
       expect(response.body).toEqual([
@@ -64,17 +100,33 @@ describe('Test tagController', () => {
     it('should return error 500 if getTagCountMap returns null', async () => {
       getTagCountMapSpy.mockResolvedValueOnce(null);
 
-      const response = await supertest(app).get('/tag/getTagsWithQuestionNumber');
+      const response = await testServer.get('/tag/getTagsWithQuestionNumber');
 
       expect(response.status).toBe(500);
+      expect(response.text).toContain('Error when fetching tag count map');
     });
 
     it('should return error 500 if getTagCountMap throws an error', async () => {
       getTagCountMapSpy.mockRejectedValueOnce(new Error('Error fetching tags'));
 
-      const response = await supertest(app).get('/tag/getTagsWithQuestionNumber');
+      const response = await testServer.get('/tag/getTagsWithQuestionNumber');
 
       expect(response.status).toBe(500);
+      expect(response.text).toContain('Error when fetching tag count map');
+    });
+  });
+
+  describe('GET /getPredefinedTags', () => {
+    it('should return predefined tags list', async () => {
+      const response = await testServer.get('/tag/getPredefinedTags');
+
+      expect(response.status).toBe(200);
+      expect(Array.isArray(response.body)).toBe(true);
+      // At least check that we get some tags back
+      expect(response.body.length).toBeGreaterThan(0);
+      // Check that each item has the expected structure
+      expect(response.body[0]).toHaveProperty('name');
+      expect(response.body[0]).toHaveProperty('qcnt', 0);
     });
   });
 });
