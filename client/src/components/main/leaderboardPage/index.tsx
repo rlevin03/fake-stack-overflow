@@ -1,4 +1,3 @@
-// client/src/components/main/leaderboardPage/index.tsx
 import React, { useEffect, useState, useRef } from 'react';
 import { io, Socket } from 'socket.io-client';
 import './index.css';
@@ -29,12 +28,13 @@ const LeaderboardPage: React.FC = () => {
     const socket = socketRef.current;
     if (!socket) return;
 
-    // Save listener functions into variables to use in off()
+    // Listen for leaderboard data
     const top10Listener = (data: LeaderboardUser[]) => {
       const sorted = [...data].sort((a, b) => b.points - a.points);
       setLeaderboard(sorted);
     };
 
+    // Listen for the user's rank
     const userRankListener = (data: { rank: number }) => {
       setUserRank(data.rank);
     };
@@ -42,14 +42,19 @@ const LeaderboardPage: React.FC = () => {
     socket.on('top10Response', top10Listener);
     socket.on('userRankResponse', userRankListener);
 
+    // Emit event to get top 10 leaderboard
     socket.emit('getTop10');
+    // Emit event to get the user's personal rank – ensure the username exists.
+    if (user && user.username) {
+      socket.emit('getUserRank', { username: user.username });
+    }
 
     // eslint-disable-next-line consistent-return
     return () => {
       socket.off('top10Response', top10Listener);
       socket.off('userRankResponse', userRankListener);
     };
-  }, []);
+  }, [user]);
 
   return (
     <div className='leaderboard-container'>
@@ -67,14 +72,10 @@ const LeaderboardPage: React.FC = () => {
         <p>No leaderboard data.</p>
       )}
       <div className='rank-info'>
-        {user.hideRanking ? (
-          <p>Your public ranking is hidden.</p>
-        ) : (
-          userRank !== null && (
-            <p>
-              Your overall rank: <strong>{userRank}</strong>
-            </p>
-          )
+        {userRank !== null && (
+          <p>
+            Your overall rank: <strong>{userRank}</strong>
+          </p>
         )}
       </div>
       <div className='mt-8'>
