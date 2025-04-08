@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { Badge } from '../../../../types/types';
-import { getBadges } from '../../../../services/badgeService';
+import getBadges from '../../../../services/badgeService';
 import './index.css';
 
 interface BadgeComponentProps {

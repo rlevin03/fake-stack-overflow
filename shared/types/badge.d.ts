@@ -52,3 +52,27 @@ export interface BadgeRequest extends Request {
     badgeIds: string[];
   };
 }
+
+// Add this to shared/types/types.d.ts
+
+/**
+ * Payload for badge notifications sent from the server
+ */
+export interface BadgeNotificationPayload {
+  /**
+   * Username of the user receiving the badge/progress
+   */
+  username: string;
+  /**
+   * Type of notification - full badge award or progress update
+   */
+  type: 'awarded' | 'progress';
+  /**
+   * Name of the badge
+   */
+  badgeName: string;
+  /**
+   * Notification message to display
+   */
+  message: string;
+}

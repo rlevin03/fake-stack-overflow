@@ -15,7 +15,7 @@ import {
   PopulatedDatabaseAnswer,
   Tag,
 } from '../types/types';
-import { awardingBadgeHelper } from '../utils/badge.util';
+import awardingBadgeHelper from '../utils/badge.util';
 import { BadgeName, BadgeDescription } from '../types/badgeConstants';
 
 const answerController = (socket: FakeSOSocket) => {
@@ -114,24 +114,30 @@ const answerController = (socket: FakeSOSocket) => {
         ansInfo.ansBy,
         BadgeName.HELPING_HAND,
         BadgeDescription.HELPING_HAND,
+        socket,
       );
 
       // --- End: Update the helping hand badge progress ---
 
-      //Begin: Update the lifelife badge progress
+      // Begin: Update the lifelife badge progress
       if (question) {
         const questionDate = new Date(question.askDateTime);
         const answerDate = new Date(ansInfo.ansDateTime);
         const timeDiff = answerDate.getTime() - questionDate.getTime();
 
         if (timeDiff > 24 * 60 * 60 * 1000) {
-          await awardingBadgeHelper(ansInfo.ansBy, BadgeName.LIFELINE, BadgeDescription.LIFELINE);
+          await awardingBadgeHelper(
+            ansInfo.ansBy,
+            BadgeName.LIFELINE,
+            BadgeDescription.LIFELINE,
+            socket,
+          );
         }
       }
 
-      //End: Update the lifelife badge progress
+      // End: Update the lifelife badge progress
 
-      //Begin: Update the lightning responder badge progress
+      // Begin: Update the lightning responder badge progress
       if (question) {
         const questionDate = new Date(question.askDateTime);
         const answerDate = new Date(ansInfo.ansDateTime);
@@ -142,10 +148,11 @@ const answerController = (socket: FakeSOSocket) => {
             ansInfo.ansBy,
             BadgeName.LIGHTNING_RESPONDER,
             BadgeDescription.LIGHTNING_RESPONDER,
+            socket,
           );
         }
       }
-      //End: Update the lightning responder badge progress
+      // End: Update the lightning responder badge progress
 
       // Populates the fields of the answer that was added and emits the new object
       socket.emit('answerUpdate', {
@@ -188,6 +195,7 @@ const answerController = (socket: FakeSOSocket) => {
           username,
           BadgeName.RESPECTED_VOICE,
           BadgeDescription.RESPECTED_VOICE,
+          socket,
         );
         const answer = await AnswerModel.findById(ansid);
         if (!answer) {
@@ -203,6 +211,7 @@ const answerController = (socket: FakeSOSocket) => {
             user.username,
             BadgeName.PEOPLES_CHAMPION,
             BadgeDescription.PEOPLES_CHAMPION,
+            socket,
           );
         }
       } else {

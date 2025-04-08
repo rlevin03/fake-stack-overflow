@@ -3,7 +3,12 @@ import api from './config';
 
 const BADGE_API_URL = `${process.env.REACT_APP_SERVER_URL}/badge`;
 
-export const getBadges = async (badgeIds: string[]): Promise<Badge[]> => {
+/**
+ * Fetches badges by their IDs
+ * @param badgeIds Array of badge IDs to fetch
+ * @returns Promise resolving to an array of Badge objects
+ */
+const getBadges = async (badgeIds: string[]): Promise<Badge[]> => {
   try {
     const res = await api.get(`${BADGE_API_URL}/badges`, {
       params: { badgeIds },
@@ -16,3 +21,5 @@ export const getBadges = async (badgeIds: string[]): Promise<Badge[]> => {
     throw new Error('Failed to fetch badges: Unknown error occurred');
   }
 };
+
+export default getBadges;
