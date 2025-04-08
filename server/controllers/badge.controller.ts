@@ -1,4 +1,3 @@
-import { BadgeRequest } from '../types/types';
 import express, { Request, Response } from 'express';
 import { getBadgesByIds } from '../services/badge.service';
 
@@ -11,7 +10,7 @@ const badgeController = () => {
    * @returns True if the request is valid, false otherwise
    */
   const isBadgeRequestValid = (req: Request): boolean => {
-    const badgeIds = req.query.badgeIds;
+    const { badgeIds } = req.query;
     return Boolean(badgeIds && Array.isArray(badgeIds));
   };
 

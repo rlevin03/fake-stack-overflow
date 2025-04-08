@@ -7,7 +7,6 @@ import InterestsCard from './InterestsCard';
 const ProfileSettings: React.FC = () => {
   const {
     userData,
-    loading,
     editBioMode,
     newBio,
     newPassword,

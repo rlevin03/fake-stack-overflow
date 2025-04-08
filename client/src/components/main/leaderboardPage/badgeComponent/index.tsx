@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { io, Socket } from 'socket.io-client';
 import { Badge } from '../../../../types/types';
-import { getBadges } from '../../../../services/badgeService';
+import getBadges from '../../../../services/badgeService';
 import './index.css';
 
 interface BadgeComponentProps {
@@ -26,12 +25,9 @@ const BadgeComponent: React.FC<BadgeComponentProps> = ({ badgeIds }) => {
   useEffect(() => {
     const fetchBadges = async () => {
       try {
-        console.log('Fetching badges for IDs:', badgeIds);
         const fetchedBadges = await getBadges(badgeIds);
-        console.log('Fetched badges:', fetchedBadges);
         setBadges(fetchedBadges);
       } catch (error2) {
-        console.error('Error fetching badges:', error2);
         setError(`Error fetching badges: ${error2}`);
       }
     };

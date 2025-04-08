@@ -103,6 +103,9 @@ export interface ServerToClientEvents {
   gameError: (error: GameErrorPayload) => void;
   chatUpdate: (chat: ChatUpdatePayload) => void;
   sessionUpdate: (payload: SessionUpdatePayload) => void;
+
+  badgeNotification: (notification: BadgeNotificationPayload) => void;
+
   // --- NEW EVENTS FOR LEADERBOARD ---
   userRankResponse: (payload: { rank: number }) => void;
   top10Response: (payload: { username: string; points: number }[]) => void;

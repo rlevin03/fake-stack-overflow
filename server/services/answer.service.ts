@@ -184,7 +184,7 @@ export const addVoteToAnswer = async (
       if (Array.isArray(top10)) {
         socket.emit('top10Response', top10);
       } else {
-        console.error('Error fetching top 10:', top10.error);
+        /* empty */
       }
     }
 

@@ -68,6 +68,21 @@ export interface PopulatedDatabaseQuestion
 }
 
 /**
+ * Represents a fully populated question from the database.
+ * - `tags`: An array of populated `DatabaseTag` objects.
+ * - `answers`: An array of populated `PopulatedDatabaseAnswer` objects.
+ * - `comments`: An array of populated `DatabaseComment` objects.
+ * - `views`: An array of usernames who have viewed the question.
+ */
+export interface PopulatedDatabaseQuestionWithViews
+  extends Omit<DatabaseQuestion, 'tags' | 'answers' | 'comments' | 'views'> {
+  tags: DatabaseTag[];
+  answers: PopulatedDatabaseAnswer[];
+  comments: DatabaseComment[];
+  views: string[];
+}
+
+/**
  * Type representing possible responses for a Question-related operation.
  * - Either a `DatabaseQuestion` object or an error message.
  */

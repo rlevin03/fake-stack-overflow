@@ -200,7 +200,6 @@ export const saveQuestion = async (
     if (Array.isArray(top10)) {
       socket.emit('top10Response', top10);
     } else {
-      console.error('Error fetching top 10:', top10.error);
       // Optionally: socket.emit('error', top10.error);
     }
 
@@ -209,7 +208,6 @@ export const saveQuestion = async (
     if (!('error' in rankResult)) {
       socket.emit('userRankResponse', { rank: rankResult.rank });
     } else {
-      console.error('Error fetching user rank:', rankResult.error);
       // Optionally: socket.emit('error', rankResult.error);
     }
 
@@ -314,7 +312,6 @@ export const addVoteToQuestion = async (
     if (Array.isArray(top10)) {
       socket.emit('top10Response', top10);
     } else {
-      console.error('Error fetching top 10:', top10.error);
       // Optionally: socket.emit('error', top10.error);
     }
 

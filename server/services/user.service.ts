@@ -1,16 +1,13 @@
-import { Types } from 'mongoose';
 import tagIndexMap from '@fake-stack-overflow/shared/tagIndexMap.json'; // Adjust path as needed
 import QuestionModel from '../models/questions.model';
-import TagModel from '../models/tags.model';
 import UserModel from '../models/users.model';
 
 import {
   DatabaseComment,
-  DatabaseQuestion,
   DatabaseTag,
   DatabaseUser,
   PopulatedDatabaseAnswer,
-  PopulatedDatabaseQuestion,
+  PopulatedDatabaseQuestionWithViews,
   SafeDatabaseUser,
   User,
   UserCredentials,
@@ -269,9 +266,16 @@ export const getPointsHistory = async (username: string): Promise<string[] | { e
  * Retrieves recommendations for a user by comparing the user's preferences
  * with the questions' tag vectors using cosine similarity.
  */
+/**
+ * Retrieves recommendations for a user by comparing the user's preferences
+ * with the questions' tag vectors using cosine similarity.
+ * Questions already viewed by the user will be placed at the end of the list.
+ */
 export const getUserRecommendations = async (
   userId: string,
-): Promise<{ question: PopulatedDatabaseQuestion; similarity: number }[] | { error: string }> => {
+): Promise<
+  { question: PopulatedDatabaseQuestionWithViews; similarity: number }[] | { error: string }
+> => {
   try {
     const user = await UserModel.findById(userId);
     if (!user) {
@@ -316,11 +320,23 @@ export const getUserRecommendations = async (
       questions.map(async question => {
         const questionVector = tagsToVector(question.tags);
         const similarity = cosineSimilarity(user.preferences, questionVector);
-        return { question, similarity };
+        // Check if the current user has viewed this question
+        const hasViewed = question.views?.includes(user.username) || false;
+        return { question, similarity, hasViewed };
       }),
     );
-    recommendations.sort((a, b) => b.similarity - a.similarity);
-    return recommendations;
+
+    // Sort by similarity but put viewed questions at the end
+    recommendations.sort((a, b) => {
+      // If one is viewed and the other is not, the viewed one goes last
+      if (a.hasViewed && !b.hasViewed) return 1;
+      if (!a.hasViewed && b.hasViewed) return -1;
+      // If both are viewed or both are not viewed, sort by similarity
+      return b.similarity - a.similarity;
+    });
+
+    // Remove the hasViewed property before returning since it's not in the expected return type
+    return recommendations.map(({ question, similarity }) => ({ question, similarity }));
   } catch (error: unknown) {
     return { error: `Error occurred when retrieving recommendations: ${formatError(error)}` };
   }
