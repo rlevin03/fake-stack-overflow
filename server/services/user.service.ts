@@ -1,6 +1,10 @@
-import tagIndexMap from '@fake-stack-overflow/shared/tagIndexMap.json'; // Adjust path as needed
+// server/services/user.service.ts
+
+import tagIndexMapRaw from '@fake-stack-overflow/shared/tagIndexMap.json';
 import QuestionModel from '../models/questions.model';
 import UserModel from '../models/users.model';
+import AnswerModel from '../models/answers.model';
+import CommentModel from '../models/comments.model';
 
 import {
   DatabaseComment,
@@ -14,8 +18,9 @@ import {
   UserResponse,
   UsersResponse,
 } from '../types/types';
-import AnswerModel from '../models/answers.model';
-import CommentModel from '../models/comments.model';
+
+// Cast the imported JSON to a record mapping tag names to indices.
+const tagIndexMap = tagIndexMapRaw as Record<string, number>;
 
 /**
  * Helper to convert unknown errors to a readable string.
@@ -26,6 +31,23 @@ function formatError(error: unknown): string {
 }
 
 /**
+ * Helper: Converts a DatabaseUser into a SafeDatabaseUser by omitting the password.
+ */
+const makeSafeUser = (user: DatabaseUser): SafeDatabaseUser => ({
+  _id: user._id,
+  username: user.username,
+  dateJoined: user.dateJoined,
+  biography: user.biography,
+  preferences: user.preferences,
+  points: user.points,
+  badges: user.badges,
+  aiToggler: user.aiToggler,
+  pointsHistory: user.pointsHistory,
+  hideRanking: user.hideRanking,
+  lastActive: user.lastActive,
+});
+
+/**
  * Saves a new user to the database.
  */
 export const saveUser = async (user: User): Promise<UserResponse> => {
@@ -34,20 +56,7 @@ export const saveUser = async (user: User): Promise<UserResponse> => {
     if (!result) {
       throw new Error('Failed to create user');
     }
-    // Remove password from the returned object
-    const safeUser: SafeDatabaseUser = {
-      _id: result._id,
-      username: result.username,
-      dateJoined: result.dateJoined,
-      biography: result.biography,
-      preferences: result.preferences,
-      points: result.points,
-      badges: result.badges,
-      aiToggler: result.aiToggler,
-      pointsHistory: result.pointsHistory,
-      hideRanking: result.hideRanking,
-      lastActive: result.lastActive,
-    };
+    const safeUser: SafeDatabaseUser = makeSafeUser(result);
     return safeUser;
   } catch (error: unknown) {
     return { error: `Error occurred when saving user: ${formatError(error)}` };
@@ -62,9 +71,7 @@ export const getUserByUsername = async (username: string): Promise<UserResponse>
     const user: SafeDatabaseUser | null = await UserModel.findOne({ username })
       .select('-password')
       .lean();
-    if (!user) {
-      throw new Error('User not found');
-    }
+    if (!user) throw new Error('User not found');
     return user;
   } catch (error: unknown) {
     return { error: `Error occurred when finding user: ${formatError(error)}` };
@@ -87,16 +94,17 @@ export const getUsersList = async (): Promise<UsersResponse> => {
  * Authenticates a user by verifying their username and password.
  * (Note: This is not secure for production without hashing!)
  */
-export const loginUser = async (loginCredentials: UserCredentials): Promise<UserResponse> => {
+export const loginUser = async (
+  loginCredentials: UserCredentials
+): Promise<UserResponse> => {
   const { username, password } = loginCredentials;
   try {
     const user: SafeDatabaseUser | null = await UserModel.findOne({ username, password })
       .select('-password')
       .lean();
-    if (!user) {
-      throw new Error('Authentication failed');
-    }
-    // Update the user's lastActive field upon successful login.
+    if (!user) throw new Error('Authentication failed');
+
+    // Update lastActive on successful login.
     await UserModel.updateOne({ username }, { $set: { lastActive: new Date() } });
     return user;
   } catch (error: unknown) {
@@ -112,9 +120,7 @@ export const deleteUserByUsername = async (username: string): Promise<UserRespon
     const deletedUser: SafeDatabaseUser | null = await UserModel.findOneAndDelete({ username })
       .select('-password')
       .lean();
-    if (!deletedUser) {
-      throw new Error('Error deleting user');
-    }
+    if (!deletedUser) throw new Error('Error deleting user');
     return deletedUser;
   } catch (error: unknown) {
     return { error: `Error occurred when deleting user: ${formatError(error)}` };
@@ -126,19 +132,17 @@ export const deleteUserByUsername = async (username: string): Promise<UserRespon
  */
 export const updateUser = async (
   username: string,
-  updates: Partial<User>,
+  updates: Partial<User>
 ): Promise<UserResponse> => {
   try {
     const updatedUser: SafeDatabaseUser | null = await UserModel.findOneAndUpdate(
       { username },
       { $set: updates },
-      { new: true },
+      { new: true }
     )
       .select('-password')
       .lean();
-    if (!updatedUser) {
-      throw new Error('Error updating user');
-    }
+    if (!updatedUser) throw new Error('Error updating user');
     return updatedUser;
   } catch (error: unknown) {
     return { error: `Error occurred when updating user: ${formatError(error)}` };
@@ -165,13 +169,12 @@ export const getTop10ByPoints = async (): Promise<SafeDatabaseUser[] | { error: 
  * Returns the rank of a user by username, based on how many users have strictly more points.
  */
 export const getRankForUser = async (
-  username: string,
+  username: string
 ): Promise<{ rank: number } | { error: string }> => {
   try {
     const user = await UserModel.findOne({ username }).lean();
-    if (!user) {
-      return { error: 'User not found' };
-    }
+    if (!user) return { error: 'User not found' };
+
     const higherPointsCount = await UserModel.countDocuments({
       points: { $gt: user.points },
       hideRanking: { $ne: true },
@@ -189,35 +192,21 @@ export const getRankForUser = async (
  */
 export const updateUserPreferences = async (
   userId: string,
-  updates: { index: number; value: number }[],
+  updates: { index: number; value: number }[]
 ): Promise<UserResponse> => {
   try {
     const user = await UserModel.findById(userId);
-    if (!user) {
-      throw new Error('User not found');
-    }
+    if (!user) throw new Error('User not found');
+
     // Update each specified index.
     updates.forEach(({ index, value }) => {
       if (index >= 0 && index < 1000) {
-        user.preferences[index] += value;
+        // Ensure that a valid number is present before updating.
+        user.preferences[index] = (user.preferences[index] || 0) + value;
       }
     });
     await user.save();
-    // Construct a safe user response.
-    const safeUser: SafeDatabaseUser = {
-      _id: user._id,
-      username: user.username,
-      dateJoined: user.dateJoined,
-      biography: user.biography,
-      preferences: user.preferences,
-      points: user.points,
-      aiToggler: user.aiToggler,
-      badges: user.badges,
-      pointsHistory: user.pointsHistory,
-      hideRanking: user.hideRanking,
-      lastActive: user.lastActive,
-    };
-    return safeUser;
+    return makeSafeUser(user.toObject());
   } catch (error: unknown) {
     return { error: `Error occurred when updating preferences: ${formatError(error)}` };
   }
@@ -228,19 +217,17 @@ export const updateUserPreferences = async (
  */
 export const appendPointsHistory = async (
   userId: string,
-  historyItem: string,
+  historyItem: string
 ): Promise<UserResponse> => {
   try {
     const updatedUser = await UserModel.findByIdAndUpdate(
       userId,
       { $push: { pointsHistory: historyItem } },
-      { new: true },
+      { new: true }
     )
       .select('-password')
       .lean();
-    if (!updatedUser) {
-      throw new Error('User not found');
-    }
+    if (!updatedUser) throw new Error('User not found');
     return updatedUser;
   } catch (error: unknown) {
     return { error: `Error updating points history: ${formatError(error)}` };
@@ -250,12 +237,12 @@ export const appendPointsHistory = async (
 /**
  * Retrieves a user's points history by username.
  */
-export const getPointsHistory = async (username: string): Promise<string[] | { error: string }> => {
+export const getPointsHistory = async (
+  username: string
+): Promise<string[] | { error: string }> => {
   try {
     const user = await UserModel.findOne({ username }).select('pointsHistory').lean();
-    if (!user) {
-      throw new Error('User not found');
-    }
+    if (!user) throw new Error('User not found');
     return user.pointsHistory || [];
   } catch (error: unknown) {
     return { error: `Error retrieving points history: ${formatError(error)}` };
@@ -265,23 +252,17 @@ export const getPointsHistory = async (username: string): Promise<string[] | { e
 /**
  * Retrieves recommendations for a user by comparing the user's preferences
  * with the questions' tag vectors using cosine similarity.
- */
-/**
- * Retrieves recommendations for a user by comparing the user's preferences
- * with the questions' tag vectors using cosine similarity.
  * Questions already viewed by the user will be placed at the end of the list.
  */
 export const getUserRecommendations = async (
-  userId: string,
+  userId: string
 ): Promise<
   { question: PopulatedDatabaseQuestionWithViews; similarity: number }[] | { error: string }
 > => {
   try {
     const user = await UserModel.findById(userId);
-    if (!user) {
-      throw new Error('User not found');
-    }
-    // Retrieve all questions with fully populated tags and related fields.
+    if (!user) throw new Error('User not found');
+
     const questions = await QuestionModel.find()
       .populate<{ tags: DatabaseTag[] }>('tags')
       .populate<{ answers: PopulatedDatabaseAnswer[] }>({
@@ -299,7 +280,7 @@ export const getUserRecommendations = async (
     const tagsToVector = (tags: DatabaseTag[]): number[] => {
       const vector = new Array(1000).fill(0);
       for (const tag of tags) {
-        const index = (tagIndexMap as Record<string, number>)[tag.name];
+        const index = tagIndexMap[tag.name];
         if (index !== undefined) {
           vector[index] = 1;
         }
@@ -320,22 +301,19 @@ export const getUserRecommendations = async (
       questions.map(async question => {
         const questionVector = tagsToVector(question.tags);
         const similarity = cosineSimilarity(user.preferences, questionVector);
-        // Check if the current user has viewed this question
+        // Check if the user has viewed this question.
         const hasViewed = question.views?.includes(user.username) || false;
         return { question, similarity, hasViewed };
-      }),
+      })
     );
 
-    // Sort by similarity but put viewed questions at the end
     recommendations.sort((a, b) => {
-      // If one is viewed and the other is not, the viewed one goes last
+      // Place viewed questions at the end.
       if (a.hasViewed && !b.hasViewed) return 1;
       if (!a.hasViewed && b.hasViewed) return -1;
-      // If both are viewed or both are not viewed, sort by similarity
       return b.similarity - a.similarity;
     });
 
-    // Remove the hasViewed property before returning since it's not in the expected return type
     return recommendations.map(({ question, similarity }) => ({ question, similarity }));
   } catch (error: unknown) {
     return { error: `Error occurred when retrieving recommendations: ${formatError(error)}` };
@@ -350,23 +328,14 @@ export const getUserRecommendations = async (
 export const decayInactiveUserPoints = async (): Promise<void> => {
   try {
     const now = new Date();
-    // Calculate the threshold date (60 days ago)
     const sixtyDaysAgo = new Date(now.getTime() - 60 * 24 * 60 * 60 * 1000);
-
-    // Find users who haven't been active in the last 60 days.
     const inactiveUsers = await UserModel.find({ lastActive: { $lt: sixtyDaysAgo } });
 
-    // Create an array of update promises.
     const updatePromises = inactiveUsers.map(async user => {
-      const diffMilliseconds = now.getTime() - user.lastActive.getTime();
-      const diffDays = Math.floor(diffMilliseconds / (24 * 60 * 60 * 1000));
+      const diffDays = Math.floor((now.getTime() - user.lastActive.getTime()) / (24 * 60 * 60 * 1000));
       const periods = Math.floor(diffDays / 30);
-
       if (periods > 0) {
-        // Calculate the new points after decaying by 10% for every full 30-day period.
         const newPoints = Math.floor(user.points * 0.9 ** periods);
-
-        // Update the user record with the new points and add a record to pointsHistory.
         return UserModel.updateOne(
           { _id: user._id },
           {
@@ -374,17 +343,14 @@ export const decayInactiveUserPoints = async (): Promise<void> => {
             $push: {
               pointsHistory: `Decayed from ${user.points} to ${newPoints} after ${periods} period(s) of inactivity (over 60 days).`,
             },
-          },
+          }
         );
       }
-
-      // If no full period has passed, resolve immediately.
       return Promise.resolve();
     });
-
-    // Await all update promises concurrently.
     await Promise.all(updatePromises);
   } catch (error: unknown) {
-    // Handle error (e.g., log it)
+    // Log error if desired, but do not rethrow to avoid crashing the decay job.
+    console.error(`Error in decayInactiveUserPoints: ${formatError(error)}`);
   }
 };
