@@ -5,6 +5,7 @@ import cors from 'cors';
 import { Server } from 'socket.io';
 import * as http from 'http';
 
+import './decayJob';
 import answerController from './controllers/answer.controller';
 import questionController from './controllers/question.controller';
 import tagController from './controllers/tag.controller';

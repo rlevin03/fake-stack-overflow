@@ -26,6 +26,9 @@ export interface User extends UserCredentials {
   biography?: string;
   preferences: number[];
   aiToggler: boolean;
+  pointsHistory: string[];
+  hideRanking: boolean;
+  lastActive: Date;
 }
 
 /**

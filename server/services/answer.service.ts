@@ -13,7 +13,7 @@ import {
 import AnswerModel from '../models/answers.model';
 import QuestionModel from '../models/questions.model';
 import UserModel from '../models/users.model';
-import { getTop10ByPoints } from './user.service';
+import { getTop10ByPoints, appendPointsHistory } from './user.service';
 
 /**
  * Records the most recent answer time for a given question based on its answers.
@@ -46,6 +46,11 @@ export const saveAnswer = async (answer: Answer): Promise<AnswerResponse> => {
       { username: answer.ansBy },
       { $push: { questionsAnswered: result._id }, $inc: { points: 5 } },
     );
+    const userRecord = await UserModel.findOne({ username: answer.ansBy });
+    if (userRecord) {
+      const historyEntry = `Awarded 5 points for posting an answer at ${new Date().toLocaleString()}`;
+      await appendPointsHistory(userRecord._id.toString(), historyEntry);
+    }
     return result;
   } catch (error) {
     return { error: 'Error when saving an answer' };
@@ -165,6 +170,13 @@ export const addVoteToAnswer = async (
         $inc: { points: 1 },
       },
     );
+
+    const voterUser = await UserModel.findOne({ username });
+    if (voterUser) {
+      const action = voteType === 'upvote' ? 'upvoted' : 'downvoted';
+      const historyEntry = `Awarded 1 point for ${action} an answer at ${new Date().toLocaleString()}.`;
+      await appendPointsHistory(voterUser._id.toString(), historyEntry);
+    }
 
     // 3) Fetch and broadcast the updated top 10 if socket is provided
     if (socket) {
