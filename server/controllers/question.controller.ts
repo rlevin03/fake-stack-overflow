@@ -27,7 +27,7 @@ import { getGeminiResponse, getGeminiAutoComplete } from '../services/gemini.ser
 import { saveAnswer, addAnswerToQuestion } from '../services/answer.service';
 import QuestionModel from '../models/questions.model';
 import UserModel from '../models/users.model';
-import { awardingBadgeHelper } from '../utils/badge.util';
+import awardingBadgeHelper from '../utils/badge.util';
 
 const questionController = (socket: FakeSOSocket) => {
   const router = express.Router();
@@ -281,7 +281,12 @@ const questionController = (socket: FakeSOSocket) => {
 
       // --- Begin: Update the curious cat badge progress ---
       if (type === 'upvote' && status.upVotes.length === 1) {
-        await awardingBadgeHelper(username, BadgeName.CURIOUS_CAT, BadgeDescription.CURIOUS_CAT);
+        await awardingBadgeHelper(
+          username,
+          BadgeName.CURIOUS_CAT,
+          BadgeDescription.CURIOUS_CAT,
+          socket,
+        );
       }
       // --- End: Update the curious cat badge progress ---
 
