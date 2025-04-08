@@ -8,6 +8,9 @@ const mockUser: User = {
   username: 'user1',
   password: 'password',
   dateJoined: new Date('2024-12-03'),
+  badges: [],
+  preferences: [],
+  aiToggler: false,
 };
 
 const mockSafeUser: SafeDatabaseUser = {
@@ -15,12 +18,18 @@ const mockSafeUser: SafeDatabaseUser = {
   username: 'user1',
   dateJoined: new Date('2024-12-03'),
   points: 0,
+  badges: [],
+  preferences: [],
+  aiToggler: false,
 };
 
 const mockUserJSONResponse = {
   _id: mockSafeUser._id.toString(),
   username: 'user1',
   dateJoined: new Date('2024-12-03').toISOString(),
+  badges: [],
+  preferences: [],
+  aiToggler: false,
 };
 
 const saveUserSpy = jest.spyOn(util, 'saveUser');

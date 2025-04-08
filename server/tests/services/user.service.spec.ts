@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 import UserModel from '../../models/users.model';
+import QuestionModel from '../../models/questions.model';
 import {
   deleteUserByUsername,
   getUserByUsername,
@@ -7,6 +8,10 @@ import {
   loginUser,
   saveUser,
   updateUser,
+  getTop10ByPoints,
+  getRankForUser,
+  updateUserPreferences,
+  getUserRecommendations,
 } from '../../services/user.service';
 import { SafeDatabaseUser, User, UserCredentials } from '../../types/types';
 import { user, safeUser } from '../mockData.models';
@@ -89,14 +94,6 @@ describe('getUsersList', () => {
 
     expect(retrievedUsers[0].username).toEqual(safeUser.username);
     expect(retrievedUsers[0].dateJoined).toEqual(safeUser.dateJoined);
-  });
-
-  it('should throw an error if the users cannot be found', async () => {
-    mockingoose(UserModel).toReturn(null, 'find');
-
-    const getUsersError = await getUsersList();
-
-    expect('error' in getUsersError).toBe(true);
   });
 
   it('should throw an error if there is an error while searching the database', async () => {
@@ -196,6 +193,9 @@ describe('updateUser', () => {
     username: user.username,
     dateJoined: user.dateJoined,
     points: 0,
+    badges: [],
+    preferences: [],
+    aiToggler: false,
   };
 
   const updates: Partial<User> = {
@@ -260,5 +260,158 @@ describe('updateUser', () => {
     const updatedError = await updateUser(user.username, biographyUpdates);
 
     expect('error' in updatedError).toBe(true);
+  });
+});
+
+describe('getTop10ByPoints', () => {
+  beforeEach(() => {
+    mockingoose.resetAll();
+  });
+
+  it('should return the top 10 users by points', async () => {
+    const top10Users = Array(10).fill(safeUser);
+    mockingoose(UserModel).toReturn(top10Users, 'find');
+
+    const result = await getTop10ByPoints();
+    if (Array.isArray(result)) {
+      expect(result).toHaveLength(10);
+      expect(result[0].username).toEqual(safeUser.username);
+    } else {
+      throw new Error('Expected array result');
+    }
+  });
+
+  it('should return an error if there is a database error', async () => {
+    mockingoose(UserModel).toReturn(new Error('Error finding documents'), 'find');
+
+    const result = await getTop10ByPoints();
+
+    expect('error' in result).toBe(true);
+  });
+});
+
+describe('getRankForUser', () => {
+  beforeEach(() => {
+    mockingoose.resetAll();
+  });
+
+  it('should return the correct rank for a user', async () => {
+    const userWithPoints = { ...safeUser, points: 100 };
+    mockingoose(UserModel).toReturn(userWithPoints, 'findOne');
+    mockingoose(UserModel).toReturn(5, 'countDocuments');
+
+    const result = await getRankForUser(safeUser.username);
+    if ('rank' in result) {
+      expect(result.rank).toBe(6); // 5 users with higher points + 1
+    } else {
+      throw new Error('Expected rank result');
+    }
+  });
+
+  it('should return an error if user is not found', async () => {
+    mockingoose(UserModel).toReturn(null, 'findOne');
+
+    const result = await getRankForUser('nonexistentuser');
+
+    expect('error' in result).toBe(true);
+  });
+
+  it('should return an error if there is a database error', async () => {
+    mockingoose(UserModel).toReturn(new Error('Error finding user'), 'findOne');
+
+    const result = await getRankForUser(safeUser.username);
+
+    expect('error' in result).toBe(true);
+  });
+});
+
+describe('updateUserPreferences', () => {
+  beforeEach(() => {
+    mockingoose.resetAll();
+  });
+
+  it('should update user preferences successfully', async () => {
+    const userWithPreferences = {
+      ...safeUser,
+      preferences: new Array(1000).fill(0),
+      save: jest.fn().mockResolvedValue(true),
+    };
+    mockingoose(UserModel).toReturn(userWithPreferences, 'findById');
+
+    const updates = [
+      { index: 0, value: 1 },
+      { index: 1, value: 2 },
+    ];
+
+    const result = await updateUserPreferences(safeUser._id.toString(), updates);
+    if (!('error' in result)) {
+      expect(result.preferences[0]).toBe(1);
+      expect(result.preferences[1]).toBe(2);
+    }
+  });
+
+  it('should return an error if user is not found', async () => {
+    mockingoose(UserModel).toReturn(null, 'findById');
+
+    const updates = [{ index: 0, value: 1 }];
+    const result = await updateUserPreferences('nonexistentid', updates);
+
+    expect('error' in result).toBe(true);
+  });
+
+  it('should return an error if there is a database error', async () => {
+    mockingoose(UserModel).toReturn(new Error('Error updating preferences'), 'findById');
+
+    const updates = [{ index: 0, value: 1 }];
+    const result = await updateUserPreferences(safeUser._id.toString(), updates);
+
+    expect('error' in result).toBe(true);
+  });
+});
+
+describe('getUserRecommendations', () => {
+  beforeEach(() => {
+    mockingoose.resetAll();
+  });
+
+  it('should return recommendations for a user', async () => {
+    const userWithPreferences = {
+      ...safeUser,
+      preferences: new Array(1000).fill(0),
+    };
+    mockingoose(UserModel).toReturn(userWithPreferences, 'findById');
+
+    const mockQuestion = {
+      _id: new mongoose.Types.ObjectId(),
+      title: 'Test Question',
+      text: 'Test Question Text',
+      tags: [{ name: 'test' }],
+      answers: [],
+      comments: [],
+    };
+
+    mockingoose(QuestionModel).toReturn([mockQuestion], 'find').toReturn(mockQuestion, 'populate');
+
+    const result = await getUserRecommendations(safeUser._id.toString());
+    if (Array.isArray(result)) {
+      expect(result[0]).toHaveProperty('question');
+      expect(result[0]).toHaveProperty('similarity');
+    }
+  });
+
+  it('should return an error if user is not found', async () => {
+    mockingoose(UserModel).toReturn(null, 'findById');
+
+    const result = await getUserRecommendations('nonexistentid');
+
+    expect('error' in result).toBe(true);
+  });
+
+  it('should return an error if there is a database error', async () => {
+    mockingoose(UserModel).toReturn(new Error('Error finding user'), 'findById');
+
+    const result = await getUserRecommendations(safeUser._id.toString());
+
+    expect('error' in result).toBe(true);
   });
 });

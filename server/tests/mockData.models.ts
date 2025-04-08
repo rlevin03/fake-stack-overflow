@@ -196,6 +196,9 @@ export const user: User = {
   username: 'user1',
   password: 'password',
   dateJoined: new Date('2024-12-03'),
+  badges: [],
+  preferences: [],
+  aiToggler: false,
 };
 
 export const safeUser: SafeDatabaseUser = {
@@ -203,4 +206,7 @@ export const safeUser: SafeDatabaseUser = {
   username: 'user1',
   dateJoined: new Date('2024-12-03'),
   points: 0,
+  badges: [],
+  preferences: [],
+  aiToggler: false,
 };
