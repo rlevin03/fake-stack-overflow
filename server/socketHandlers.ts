@@ -1,10 +1,17 @@
 // server/socketHandlers.ts
 import { Server } from 'socket.io';
 import { getGeminiAutoComplete } from './services/gemini.service';
+import { updateUser } from './services/user.service';
+import { getTop10ByPoints } from './services/user.service';
 
 interface AutocompleteData {
   field: string;
   text: string;
+}
+
+interface RankingVisibilityData {
+  username: string;
+  hideRanking: boolean;
 }
 
 export const registerSocketHandlers = (io: Server) => {
@@ -36,7 +43,25 @@ export const registerSocketHandlers = (io: Server) => {
       }
     });
 
-    // You can register other socket events here as needed.
+    // NEW: Listen for ranking visibility update.
+    socket.on('updateRankingVisibility', async (data: RankingVisibilityData) => {
+      try {
+        const { username, hideRanking } = data;
+        // Update the user's hideRanking field using your updateUser function.
+        const updatedUser = await updateUser(username, { hideRanking });
+        if ('error' in updatedUser) {
+          throw new Error(updatedUser.error);
+        }
+        // Optionally, send an update back to the client that made the change.
+        socket.emit('userUpdate', { user: updatedUser, type: 'updated' });
+        // Recompute the public leaderboard (which filters out users with hideRanking = true)
+        const top10 = await getTop10ByPoints();
+        io.emit('top10Response', top10);
+      } catch (error) {
+        console.error('Error updating ranking visibility:', error);
+        socket.emit('error', { message: 'Error updating ranking visibility' });
+      }
+    });
 
     socket.on('disconnect', () => {
       console.log('User disconnected:', socket.id);

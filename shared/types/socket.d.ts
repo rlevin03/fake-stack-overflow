@@ -1,5 +1,3 @@
-// server/types/types.d.ts
-
 import { PopulatedDatabaseAnswer } from './answer';
 import { PopulatedDatabaseChat } from './chat';
 import { DatabaseMessage } from './message';
@@ -73,7 +71,7 @@ export interface ClientToServerEvents {
   leaveChat: (chatID: string | undefined) => void;
   getTop10: () => void;
   getUserRank: (data: { username: string }) => void;
-
+  updateRankingVisibility: (data: { username: string; hideRanking: boolean }) => void;
   // -- Collaborative Editor events --
   joinSession: (sessionId: string, username: string) => void;
   codeChange: (data: { codingSessionID: string; code: string; username: string }) => void;
@@ -105,13 +103,11 @@ export interface ServerToClientEvents {
   gameError: (error: GameErrorPayload) => void;
   chatUpdate: (chat: ChatUpdatePayload) => void;
   sessionUpdate: (payload: SessionUpdatePayload) => void;
-
   // --- NEW EVENTS FOR LEADERBOARD ---
   userRankResponse: (payload: { rank: number }) => void;
   top10Response: (payload: { username: string; points: number }[]) => void;
   badgesResponse: (badges: Badge[]) => void;
   error: (msg: string) => void;
-
   // -- Collaborative Editor events --
   userJoined: (username: string) => void;
   codeUpdate: (code: string) => void;

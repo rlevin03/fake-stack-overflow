@@ -173,6 +173,17 @@ const updateAIToggler = async (username: string, aiToggler: boolean): Promise<Sa
   return res.data;
 };
 
+/**
+ * Retrieves the points history for a given username.
+ */
+const getPointsHistory = async (username: string): Promise<string[]> => {
+  const res = await api.get(`${USER_API_URL}/pointsHistory/${username}`);
+  if (res.status !== 200) {
+    throw new Error('Error when fetching points history');
+  }
+  return res.data;
+};
+
 export {
   getUsers,
   getUserByUsername,
@@ -184,4 +195,5 @@ export {
   getRecommendations,
   updatePreferences,
   updateAIToggler,
+  getPointsHistory,
 };

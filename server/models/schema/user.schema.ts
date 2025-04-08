@@ -87,6 +87,18 @@ const userSchema: Schema = new Schema(
       type: [Number],
       default: () => Array(1000).fill(0),
     },
+    pointsHistory: {
+      type: [String],
+      default: [],
+    },
+    hideRanking: {
+      type: Boolean,
+      default: false,
+    },
+    lastActive: {
+      type: Date,
+      default: Date.now,
+    },
   },
   { collection: 'User' },
 );

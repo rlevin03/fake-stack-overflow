@@ -1,5 +1,3 @@
-// server/src/services/user.service.ts
-
 import { Types } from 'mongoose';
 import tagIndexMap from '@fake-stack-overflow/shared/tagIndexMap.json'; // Adjust path as needed
 import QuestionModel from '../models/questions.model';
@@ -49,6 +47,9 @@ export const saveUser = async (user: User): Promise<UserResponse> => {
       points: result.points,
       badges: result.badges,
       aiToggler: result.aiToggler,
+      pointsHistory: result.pointsHistory,
+      hideRanking: result.hideRanking,
+      lastActive: result.lastActive,
     };
     return safeUser;
   } catch (error: unknown) {
@@ -98,6 +99,8 @@ export const loginUser = async (loginCredentials: UserCredentials): Promise<User
     if (!user) {
       throw new Error('Authentication failed');
     }
+    // Update the user's lastActive field upon successful login.
+    await UserModel.updateOne({ username }, { $set: { lastActive: new Date() } });
     return user;
   } catch (error: unknown) {
     return { error: `Error occurred when authenticating user: ${formatError(error)}` };
@@ -146,11 +149,15 @@ export const updateUser = async (
 };
 
 /**
- * Returns up to 10 users with the highest points, sorted descending (excluding passwords).
+ * Returns up to 10 users with the highest points, sorted descending (excluding users who hide their ranking).
  */
 export const getTop10ByPoints = async (): Promise<SafeDatabaseUser[] | { error: string }> => {
   try {
-    const top10 = await UserModel.find().select('-password').sort({ points: -1 }).limit(10).lean();
+    const top10 = await UserModel.find({ hideRanking: { $ne: true } })
+      .select('-password')
+      .sort({ points: -1 })
+      .limit(10)
+      .lean();
     return top10;
   } catch (error: unknown) {
     return { error: `Error retrieving top 10 by points: ${formatError(error)}` };
@@ -168,7 +175,10 @@ export const getRankForUser = async (
     if (!user) {
       return { error: 'User not found' };
     }
-    const higherPointsCount = await UserModel.countDocuments({ points: { $gt: user.points } });
+    const higherPointsCount = await UserModel.countDocuments({
+      points: { $gt: user.points },
+      hideRanking: { $ne: true },
+    });
     const rank = higherPointsCount + 1;
     return { rank };
   } catch (error: unknown) {
@@ -206,10 +216,52 @@ export const updateUserPreferences = async (
       points: user.points,
       aiToggler: user.aiToggler,
       badges: user.badges,
+      pointsHistory: user.pointsHistory,
+      hideRanking: user.hideRanking,
+      lastActive: user.lastActive,
     };
     return safeUser;
   } catch (error: unknown) {
     return { error: `Error occurred when updating preferences: ${formatError(error)}` };
+  }
+};
+
+/**
+ * Helper: Appends a new record to the user's pointsHistory.
+ */
+export const appendPointsHistory = async (
+  userId: string,
+  historyItem: string,
+): Promise<UserResponse> => {
+  try {
+    const updatedUser = await UserModel.findByIdAndUpdate(
+      userId,
+      { $push: { pointsHistory: historyItem } },
+      { new: true },
+    )
+      .select('-password')
+      .lean();
+    if (!updatedUser) {
+      throw new Error('User not found');
+    }
+    return updatedUser;
+  } catch (error: unknown) {
+    return { error: `Error updating points history: ${formatError(error)}` };
+  }
+};
+
+/**
+ * Retrieves a user's points history by username.
+ */
+export const getPointsHistory = async (username: string): Promise<string[] | { error: string }> => {
+  try {
+    const user = await UserModel.findOne({ username }).select('pointsHistory').lean();
+    if (!user) {
+      throw new Error('User not found');
+    }
+    return user.pointsHistory || [];
+  } catch (error: unknown) {
+    return { error: `Error retrieving points history: ${formatError(error)}` };
   }
 };
 
@@ -271,5 +323,52 @@ export const getUserRecommendations = async (
     return recommendations;
   } catch (error: unknown) {
     return { error: `Error occurred when retrieving recommendations: ${formatError(error)}` };
+  }
+};
+
+/**
+ * DECAY FUNCTION:
+ * Decays points for users who haven't logged in for 60 days.
+ * For every full 30-day period beyond 60 days of inactivity, users lose 10% of their points.
+ */
+export const decayInactiveUserPoints = async (): Promise<void> => {
+  try {
+    const now = new Date();
+    // Calculate the threshold date (60 days ago)
+    const sixtyDaysAgo = new Date(now.getTime() - 60 * 24 * 60 * 60 * 1000);
+
+    // Find users who haven't been active in the last 60 days.
+    const inactiveUsers = await UserModel.find({ lastActive: { $lt: sixtyDaysAgo } });
+
+    // Create an array of update promises.
+    const updatePromises = inactiveUsers.map(async user => {
+      const diffMilliseconds = now.getTime() - user.lastActive.getTime();
+      const diffDays = Math.floor(diffMilliseconds / (24 * 60 * 60 * 1000));
+      const periods = Math.floor(diffDays / 30);
+
+      if (periods > 0) {
+        // Calculate the new points after decaying by 10% for every full 30-day period.
+        const newPoints = Math.floor(user.points * 0.9 ** periods);
+
+        // Update the user record with the new points and add a record to pointsHistory.
+        return UserModel.updateOne(
+          { _id: user._id },
+          {
+            $set: { points: newPoints },
+            $push: {
+              pointsHistory: `Decayed from ${user.points} to ${newPoints} after ${periods} period(s) of inactivity (over 60 days).`,
+            },
+          },
+        );
+      }
+
+      // If no full period has passed, resolve immediately.
+      return Promise.resolve();
+    });
+
+    // Await all update promises concurrently.
+    await Promise.all(updatePromises);
+  } catch (error: unknown) {
+    console.error('Error decaying inactive user points:', formatError(error));
   }
 };
