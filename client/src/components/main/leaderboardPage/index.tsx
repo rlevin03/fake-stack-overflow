@@ -26,30 +26,30 @@ const LeaderboardPage: React.FC = () => {
 
   useEffect(() => {
     const socket = socketRef.current;
-    if (!socket) return;
+    if (!socket) return undefined; // Return undefined for consistent-return rule
 
-    // Listen for leaderboard data
+    // Save listener functions into variables to use in off()
     const top10Listener = (data: LeaderboardUser[]) => {
       const sorted = [...data].sort((a, b) => b.points - a.points);
       setLeaderboard(sorted);
     };
 
-    // Listen for the user's rank
     const userRankListener = (data: { rank: number }) => {
+      console.log('Received user rank:', data);
       setUserRank(data.rank);
     };
 
     socket.on('top10Response', top10Listener);
     socket.on('userRankResponse', userRankListener);
 
-    // Emit event to get top 10 leaderboard
+    // Request leaderboard data
     socket.emit('getTop10');
-    // Emit event to get the user's personal rank – ensure the username exists.
-    if (user && user.username) {
-      socket.emit('getUserRank', { username: user.username });
+
+    // Make sure to request user rank if user exists
+    if (user && user._id) {
+      socket.emit('getUserRank', { userId: user._id });
     }
 
-    // eslint-disable-next-line consistent-return
     return () => {
       socket.off('top10Response', top10Listener);
       socket.off('userRankResponse', userRankListener);
@@ -72,11 +72,15 @@ const LeaderboardPage: React.FC = () => {
         <p>No leaderboard data.</p>
       )}
       <div className='rank-info'>
-        {userRank !== null && (
-          <p>
-            Your overall rank: <strong>{userRank}</strong>
-          </p>
-        )}
+        <p>
+          Points: <strong>{user && user.points !== undefined ? user.points : 'Loading...'}</strong>
+          {userRank !== null && (
+            <>
+              {' '}
+              | Rank: <strong>{userRank}</strong>
+            </>
+          )}
+        </p>
       </div>
       <div className='mt-8'>
         <h2 className='text-xl font-bold mb-4'>Your Badges</h2>
