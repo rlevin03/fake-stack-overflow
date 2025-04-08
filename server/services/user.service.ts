@@ -385,6 +385,6 @@ export const decayInactiveUserPoints = async (): Promise<void> => {
     // Await all update promises concurrently.
     await Promise.all(updatePromises);
   } catch (error: unknown) {
-    console.error('Error decaying inactive user points:', formatError(error));
+    // Handle error (e.g., log it)
   }
 };
