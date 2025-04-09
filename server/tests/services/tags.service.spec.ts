@@ -4,8 +4,15 @@ import { addTag, processTags, getTagCountMap } from '../../services/tag.service'
 import { POPULATED_QUESTIONS, tag1, tag2, tag3 } from '../mockData.models';
 import { DatabaseTag } from '../../types/types';
 
+const mockingoose = require('mockingoose'); // ✅ Use require here
+
+describe('Tag model', () => {
+  beforeEach(() => {
+    mockingoose.resetAll();
+    jest.clearAllMocks();
+  });
+
 // eslint-disable-next-line @typescript-eslint/no-var-requires
-const mockingoose = require('mockingoose');
 
 describe('Tag model', () => {
   beforeEach(() => {
@@ -159,3 +166,5 @@ describe('Tag model', () => {
     });
   });
 });
+});
+
