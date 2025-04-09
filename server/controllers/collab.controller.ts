@@ -1,4 +1,3 @@
-/* eslint-disable no-console */
 import { spawn } from 'child_process';
 import { FakeSOSocket } from '../types/types';
 import { addVersionToSession } from '../services/session.service';
@@ -26,9 +25,8 @@ const throttle = <Args extends unknown[], R>(
 const saveVersion = async (sessionId: string, code: string): Promise<void> => {
   try {
     await addVersionToSession(sessionId, code);
-    console.log(`Version saved for session ${sessionId}`);
   } catch (error) {
-    console.error(`Error saving version for session ${sessionId}:`, error);
+    throw new Error(`Error saving version: ${error}`);
   }
 };
 
@@ -37,21 +35,17 @@ const throttledSaveVersion = throttle(saveVersion, 5000); // Save at most once e
 
 const registerCollabHandlers = (socket: FakeSOSocket): void => {
   socket.on('connection', clientSocket => {
-    console.log('A user connected ->', clientSocket.id);
-
     clientSocket.on('joinSession', (sessionId: string, username: string) => {
       clientSocket.join(sessionId);
       clientSocket.to(sessionId).emit('userJoined', username);
-      console.log(`${username} joined session ${sessionId}`);
     });
 
     // Use explicit type annotation for destructured parameters
     clientSocket.on(
       'codeChange',
       (params: { codingSessionID: string; code: string; username: string }) => {
-        const { codingSessionID, code, username } = params;
+        const { codingSessionID, code } = params;
         clientSocket.to(codingSessionID).emit('codeUpdate', code);
-        console.log(`${username} changed code in session ${codingSessionID}`);
 
         // Throttled save of code version
         throttledSaveVersion(codingSessionID, code);
@@ -74,7 +68,6 @@ const registerCollabHandlers = (socket: FakeSOSocket): void => {
           username,
           cursorPosition,
         });
-        console.log(`${username} moved cursor in session ${codingSessionID}`);
       },
     );
 
@@ -82,8 +75,7 @@ const registerCollabHandlers = (socket: FakeSOSocket): void => {
     clientSocket.on(
       'executeCode',
       (params: { codingSessionID: string; code: string; username: string }) => {
-        const { codingSessionID, code, username } = params;
-        console.log(`${username} is executing Python code in session ${codingSessionID}`);
+        const { codingSessionID, code } = params;
 
         // Save the version before execution
         throttledSaveVersion(codingSessionID, code);
@@ -107,7 +99,6 @@ const registerCollabHandlers = (socket: FakeSOSocket): void => {
         pythonProcess.on('close', exitCode => {
           if (stderr) {
             clientSocket.emit('executionResult', `Error: ${stderr}`);
-            console.log(`Error executing Python code: ${stderr}`);
 
             // ADDED: Also broadcast the error to all users in the session
             const errorMessage = `Code execution error: ${stderr.split('\n')[0]}`;
@@ -117,14 +108,12 @@ const registerCollabHandlers = (socket: FakeSOSocket): void => {
             // Emit to everyone in the room
             socket.to(codingSessionID).emit('executionResult', stdout);
             clientSocket.emit('executionResult', stdout);
-            console.log(`Python execution successful. Output: ${stdout}`);
           }
         });
 
         // ADDED: Handle process errors
         pythonProcess.on('error', error => {
           const errorMessage = `Process error: ${error.message}`;
-          console.error(errorMessage);
           socket.to(codingSessionID).emit('editorError', errorMessage);
           clientSocket.emit('editorError', errorMessage);
         });
@@ -146,7 +135,6 @@ const registerCollabHandlers = (socket: FakeSOSocket): void => {
 
           // Validate data before broadcasting
           if (typeof lineNumber !== 'number' || !editorId || !timestamp) {
-            console.warn('Received invalid highlight params:', params);
             return;
           }
 
@@ -155,10 +143,8 @@ const registerCollabHandlers = (socket: FakeSOSocket): void => {
           clientSocket
             .to(codingSessionID)
             .emit('editHighlight', { lineNumber, editorId, timestamp });
-
-          console.log(`Edit highlight at line ${lineNumber} in session ${codingSessionID}`);
         } catch (err) {
-          console.error('Error processing edit highlight in server:', err);
+          throw new Error(`Error in editHighlight: ${err}`);
         }
       },
     );
@@ -168,24 +154,19 @@ const registerCollabHandlers = (socket: FakeSOSocket): void => {
       try {
         const { codingSessionID, errorMessage } = params;
 
-        console.error(`Editor error in session ${codingSessionID}: ${errorMessage}`);
-
         // Broadcast to all other clients in the room
         clientSocket.to(codingSessionID).emit('editorError', errorMessage);
       } catch (err) {
-        console.error('Error broadcasting editor error:', err);
+        throw new Error(`Error in editorError: ${err}`);
       }
     });
 
     clientSocket.on('leaveSession', (sessionId: string, username: string) => {
       clientSocket.leave(sessionId);
       clientSocket.to(sessionId).emit('userLeft', username);
-      console.log(`${username} left session ${sessionId}`);
     });
 
-    clientSocket.on('disconnect', () => {
-      console.log('User disconnected');
-    });
+    clientSocket.on('disconnect', () => {});
   });
 };
 
