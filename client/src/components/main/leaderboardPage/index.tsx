@@ -18,7 +18,7 @@ const LeaderboardPage: React.FC = () => {
   const socketRef = useRef<Socket | null>(null);
 
   useEffect(() => {
-    socketRef.current = io('http://localhost:8000');
+    socketRef.current = io(process.env.REACT_APP_SERVER_URL || 'http://localhost:8000');
     return () => {
       socketRef.current?.disconnect();
     };

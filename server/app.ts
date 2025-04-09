@@ -34,11 +34,11 @@ const app = express();
 const server = http.createServer(app);
 const socket: FakeSOSocket = new Server(server, {
   cors: {
-    origin: [CLIENT_URL, `${CLIENT_URL}/`],
-    methods: ['GET', 'POST', 'PUT', 'DELETE'],
+    origin: CLIENT_URL,
     credentials: true,
   },
 });
+
 
 // Call registerCollabHandlers to set up collaboration events
 registerCollabHandlers(socket);
