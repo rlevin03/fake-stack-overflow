@@ -58,17 +58,35 @@ const getGeminiResponse = async (
 
 /**
  * Calls the Gemini API to provide an autocomplete suggestion.
- * This function takes a single partial text as input.
  *
- * @param partialText - The current answer text the user has typed.
+ * The prompt is built based on the field type:
+ * - For "title": complete the question title.
+ * - For "text": complete the question description.
+ * - For "answer": complete the answer text.
+ *
+ * @param field - One of "title", "text", or "answer".
+ * @param partialText - The current partial text that the user has typed.
  * @returns A promise that resolves with the suggested continuation.
  */
-const getGeminiAutoComplete = async (partialText: string): Promise<string> => {
-  // Build a prompt instructing Gemini to complete the text
-  const prompt = `
-    Complete the following answer in plain text (no bullet points or markdown), in under 50 words:
-    ${partialText}
-  `.trim();
+const getGeminiAutoComplete = async (field: string, partialText: string): Promise<string> => {
+  let prompt = '';
+  if (field === 'title') {
+    prompt = `
+Complete the following question title in plain text (no bullet points or markdown), in under 50 words:
+${partialText}`.trim();
+  } else if (field === 'text') {
+    prompt = `
+Complete the following question description in plain text (no bullet points or markdown), in under 50 words:
+${partialText}`.trim();
+  } else if (field === 'answer') {
+    prompt = `
+Complete the following answer in plain text (no bullet points or markdown), in under 50 words:
+${partialText}`.trim();
+  } else {
+    prompt = `
+Complete the following text in plain text (no bullet points or markdown), in under 50 words:
+${partialText}`.trim();
+  }
 
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
@@ -86,9 +104,12 @@ const getGeminiAutoComplete = async (partialText: string): Promise<string> => {
   };
 
   const response = await axios.post(url, payload, {
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+    },
   });
 
+  // Extract the autocomplete suggestion from the API response.
   const suggestion = response.data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
   return suggestion;
 };

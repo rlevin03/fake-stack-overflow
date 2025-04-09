@@ -15,15 +15,15 @@ interface RankingVisibilityData {
 }
 
 export const registerSocketHandlers = (io: Server) => {
-  io.on('connection', (socket) => {
+  io.on('connection', socket => {
     console.log('Client connected:', socket.id);
 
     // Listen for autocomplete requests.
     socket.on('aiAutoComplete', async (data: AutocompleteData) => {
       try {
         const { field, text } = data;
-        const prompt = `Complete the following ${field === 'answer' ? 'answer' : field} in plain text (no bullet points or markdown), in under 50 words:\n${text}`;
-        const suggestion = await getGeminiAutoComplete(prompt);
+        // Call getGeminiAutoComplete with the field and text separately.
+        const suggestion = await getGeminiAutoComplete(field, text);
         if (field === 'title') {
           socket.emit('aiAutoCompleteResponse', suggestion);
         } else if (field === 'text') {
@@ -33,6 +33,7 @@ export const registerSocketHandlers = (io: Server) => {
         }
       } catch (err) {
         console.error('Error in aiAutoComplete:', err);
+        // Emit an empty suggestion on error.
         if (data.field === 'title') {
           socket.emit('aiAutoCompleteResponse', '');
         } else if (data.field === 'text') {
