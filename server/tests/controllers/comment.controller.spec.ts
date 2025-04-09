@@ -1,7 +1,7 @@
 import mongoose from 'mongoose';
 import supertest from 'supertest';
 import express from 'express';
-import { createServer, Server as HttpServer } from 'http';
+import { createServer } from 'http';
 import commentController from '../../controllers/comment.controller';
 import * as commentUtil from '../../services/comment.service';
 import * as databaseUtil from '../../utils/database.util';
@@ -14,8 +14,7 @@ const popDocSpy = jest.spyOn(databaseUtil, 'populateDocument');
 
 // Create test app with express
 const app = express();
-let server: HttpServer;
-let testServer: any; // Using any temporarily to avoid supertest typing issues
+app.use(express.json());
 
 // Create a proper mock that satisfies the FakeSOSocket type
 const mockEmit = jest.fn();
@@ -23,28 +22,26 @@ const mockSocket = {
   emit: mockEmit,
 } as unknown as FakeSOSocket;
 
+// Initialize the comment controller
+app.use('/comment', commentController(mockSocket));
+
+// Create server
+const server = createServer(app);
+
+// Create the test server with supertest
+const testServer = supertest(server);
+
 // Setup before all tests
 beforeAll(done => {
-  server = createServer(app);
-
-  // Initialize the chat controller with the socket
-  app.use(express.json());
-  app.use('/comment', commentController(mockSocket));
-
   // Start the server on a random port
   server.listen(0, () => {
-    testServer = supertest(server);
     done();
   });
 });
 
 // Cleanup after all tests
 afterAll(done => {
-  if (server) {
-    server.close(done);
-  } else {
-    done();
-  }
+  server.close(done);
 });
 
 // Reset mocks before each test

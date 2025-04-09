@@ -1,7 +1,7 @@
 import supertest from 'supertest';
 import mongoose from 'mongoose';
 import express from 'express';
-import { createServer, Server as HttpServer } from 'http';
+import { createServer } from 'http';
 import * as tagUtil from '../../services/tag.service';
 import TagModel from '../../models/tags.model';
 import { DatabaseTag, Tag } from '../../types/types';
@@ -13,31 +13,28 @@ const findOneSpy = jest.spyOn(TagModel, 'findOne');
 
 // Create test app with express
 const app = express();
-let httpServer: HttpServer;
-let testServer: any; // Using any temporarily to avoid supertest typing issues
+app.use(express.json());
+
+// Initialize the tag controller
+app.use('/tag', tagController());
+
+// Create HTTP server
+const httpServer = createServer(app);
+
+// Create the test server with supertest
+const testServer = supertest(httpServer);
 
 // Setup before all tests
 beforeAll(done => {
-  httpServer = createServer(app);
-
-  // Initialize the tag controller
-  app.use(express.json());
-  app.use('/tag', tagController());
-
   // Start the server on a random port
   httpServer.listen(0, () => {
-    testServer = supertest(httpServer);
     done();
   });
 });
 
 // Cleanup after all tests
 afterAll(done => {
-  if (httpServer) {
-    httpServer.close(done);
-  } else {
-    done();
-  }
+  httpServer.close(done);
 });
 
 // Reset mocks before each test

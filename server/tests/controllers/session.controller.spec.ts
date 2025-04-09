@@ -1,9 +1,9 @@
 import mongoose from 'mongoose';
 import supertest from 'supertest';
 import express from 'express';
-import { createServer, Server as HttpServer } from 'http';
+import { createServer } from 'http';
 import * as sessionService from '../../services/session.service';
-import { DatabaseSession, FakeSOSocket, SessionResponse } from '../../types/types';
+import { DatabaseSession, FakeSOSocket } from '../../types/types';
 import sessionController from '../../controllers/session.controller';
 
 // Mock session data
@@ -18,8 +18,7 @@ const mockSession: DatabaseSession = {
 
 // Create test app with express
 const app = express();
-let httpServer: HttpServer;
-let testServer: any; // Using any temporarily to avoid supertest typing issues
+app.use(express.json());
 
 // Create a proper mock for socket methods
 const mockEmit = jest.fn();
@@ -29,28 +28,26 @@ const mockSocket = {
   to: mockTo,
 } as unknown as FakeSOSocket;
 
+// Initialize the session controller with the socket
+app.use('/sessions', sessionController(mockSocket));
+
+// Create server
+const httpServer = createServer(app);
+
+// Create the test server with supertest
+const testServer = supertest(httpServer);
+
 // Setup before all tests
 beforeAll(done => {
-  httpServer = createServer(app);
-
-  // Initialize the session controller with the socket
-  app.use(express.json());
-  app.use('/sessions', sessionController(mockSocket));
-
   // Start the server on a random port
   httpServer.listen(() => {
-    testServer = supertest(httpServer);
     done();
   });
 });
 
 // Cleanup after all tests
 afterAll(done => {
-  if (httpServer) {
-    httpServer.close(done);
-  } else {
-    done();
-  }
+  httpServer.close(done);
 });
 
 // Reset mocks before each test

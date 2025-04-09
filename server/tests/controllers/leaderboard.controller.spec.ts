@@ -1,33 +1,36 @@
 import mongoose from 'mongoose';
 import supertest from 'supertest';
 import express from 'express';
-import { createServer, Server as HttpServer } from 'http';
+import { createServer } from 'http';
 import { Server as SocketIOServer } from 'socket.io';
 import { Socket, io as ioc } from 'socket.io-client';
 import { AddressInfo } from 'net';
 import * as userService from '../../services/user.service';
-import { FakeSOSocket, SafeDatabaseUser } from '../../types/types';
+import { SafeDatabaseUser } from '../../types/types';
 import leaderboardController from '../../controllers/leaderboard.controller';
 
 // Create test app with express
 const app = express();
-let httpServer: HttpServer;
-let ioServer: SocketIOServer;
+app.use(express.json());
+
+// Setup HTTP server
+const httpServer = createServer(app);
+
+// Create Socket.IO server
+const ioServer = new SocketIOServer(httpServer);
+
+// Initialize the leaderboard controller with the socket
+app.use('/leaderboard', leaderboardController(ioServer));
+
+// Create the test server with supertest
+const testServer = supertest(httpServer);
+
+// Variables for socket tests
 let clientSocket: Socket;
-let testServer: any; // Using any temporarily to avoid supertest typing issues
 let clientSocketURL: string;
 
-// Create a proper mock for socket methods
-const serverEmit = jest.fn();
-const serverTo = jest.fn().mockReturnThis();
-const mockSocket = {
-  emit: serverEmit,
-  to: serverTo,
-  on: jest.fn(),
-} as unknown as FakeSOSocket;
-
 // Mock user data for testing
-const mockUsers: SafeDatabaseUser[] = [
+const MOCK_USERS: SafeDatabaseUser[] = [
   {
     _id: new mongoose.Types.ObjectId(),
     username: 'user1',
@@ -68,21 +71,10 @@ const mockUsers: SafeDatabaseUser[] = [
 
 // Setup before all tests
 beforeAll(done => {
-  // Setup HTTP server
-  httpServer = createServer(app);
-
-  // Create Socket.IO server
-  ioServer = new SocketIOServer(httpServer);
-
-  // Initialize the leaderboard controller with the socket
-  app.use(express.json());
-  app.use('/leaderboard', leaderboardController(ioServer));
-
   // Start the server on a random port
   httpServer.listen(() => {
     const address = httpServer.address() as AddressInfo;
     clientSocketURL = `http://localhost:${address.port}`;
-    testServer = supertest(httpServer);
 
     // Create client socket
     clientSocket = ioc(clientSocketURL);
@@ -120,7 +112,7 @@ describe('Leaderboard Controller Tests', () => {
     describe('GET /top10', () => {
       it('should return top 10 users by points', async () => {
         // Mock the service function
-        getTop10ByPointsSpy.mockResolvedValue(mockUsers);
+        getTop10ByPointsSpy.mockResolvedValue(MOCK_USERS);
 
         // Make the request
         const response = await testServer.get('/leaderboard/top10');
@@ -190,7 +182,7 @@ describe('Leaderboard Controller Tests', () => {
   describe('WebSocket Event Handlers', () => {
     it('should handle getTop10 event', done => {
       // Mock the service function
-      getTop10ByPointsSpy.mockResolvedValue(mockUsers);
+      getTop10ByPointsSpy.mockResolvedValue(MOCK_USERS);
 
       // Mock client socket to handle response
       clientSocket.on('top10Response', data => {

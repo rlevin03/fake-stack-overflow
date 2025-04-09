@@ -1,8 +1,7 @@
 import mongoose from 'mongoose';
 import supertest from 'supertest';
 import express from 'express';
-import { createServer, Server as HttpServer } from 'http';
-import { Server } from 'socket.io';
+import { createServer } from 'http';
 import * as util from '../../services/message.service';
 import { DatabaseMessage, FakeSOSocket, Message } from '../../types/types';
 import messageController from '../../controllers/message.controller';
@@ -12,8 +11,7 @@ const getMessagesSpy = jest.spyOn(util, 'getMessages');
 
 // Create test app with express
 const app = express();
-let httpServer: HttpServer;
-let testServer: any; // Using any temporarily to avoid supertest typing issues
+app.use(express.json());
 
 // Create a proper mock that satisfies the FakeSOSocket type
 const mockEmit = jest.fn();
@@ -21,28 +19,26 @@ const mockSocket = {
   emit: mockEmit,
 } as unknown as FakeSOSocket;
 
+// Initialize the message controller with the socket
+app.use('/messaging', messageController(mockSocket));
+
+// Create HTTP server
+const httpServer = createServer(app);
+
+// Create the test server with supertest
+const testServer = supertest(httpServer);
+
 // Setup before all tests
 beforeAll(done => {
-  httpServer = createServer(app);
-
-  // Initialize the message controller with the socket
-  app.use(express.json());
-  app.use('/messaging', messageController(mockSocket));
-
   // Start the server on a random port
   httpServer.listen(0, () => {
-    testServer = supertest(httpServer);
     done();
   });
 });
 
 // Cleanup after all tests
 afterAll(done => {
-  if (httpServer) {
-    httpServer.close(done);
-  } else {
-    done();
-  }
+  httpServer.close(done);
 });
 
 // Reset mocks before each test

@@ -1,8 +1,7 @@
 import supertest from 'supertest';
 import mongoose from 'mongoose';
 import express from 'express';
-import { createServer, Server as HttpServer } from 'http';
-import { Server } from 'socket.io';
+import { createServer } from 'http';
 import * as util from '../../services/user.service';
 import { FakeSOSocket, SafeDatabaseUser, User } from '../../types/types';
 import userController from '../../controllers/user.controller';
@@ -47,8 +46,7 @@ const mockUserJSONResponse = {
 
 // Create test app with express
 const app = express();
-let httpServer: HttpServer;
-let testServer: any; // Using any temporarily to avoid supertest typing issues
+app.use(express.json());
 
 // Create a proper mock for socket methods
 const mockEmit = jest.fn();
@@ -58,28 +56,26 @@ const mockSocket = {
   to: mockTo,
 } as unknown as FakeSOSocket;
 
+// Initialize the user controller with the socket
+app.use('/user', userController(mockSocket));
+
+// Create HTTP server
+const httpServer = createServer(app);
+
+// Create the test server with supertest
+const testServer = supertest(httpServer);
+
 // Setup before all tests
 beforeAll(done => {
-  httpServer = createServer(app);
-
-  // Initialize the user controller with the socket
-  app.use(express.json());
-  app.use('/user', userController(mockSocket));
-
   // Start the server on a random port
   httpServer.listen(0, () => {
-    testServer = supertest(httpServer);
     done();
   });
 });
 
 // Cleanup after all tests
 afterAll(done => {
-  if (httpServer) {
-    httpServer.close(done);
-  } else {
-    done();
-  }
+  httpServer.close(done);
 });
 
 // Reset mocks before each test

@@ -1,16 +1,16 @@
 import mongoose from 'mongoose';
 import supertest from 'supertest';
 import { ObjectId } from 'mongodb';
+import express from 'express';
+import http from 'http';
 import * as answerUtil from '../../services/answer.service';
 import * as databaseUtil from '../../utils/database.util';
 import * as badgeUtil from '../../utils/badge.util';
 import QuestionModel from '../../models/questions.model';
 import AnswerModel from '../../models/answers.model';
 import UserModel from '../../models/users.model';
-import express from 'express';
 import answerController from '../../controllers/answer.controller';
 import { FakeSOSocket } from '../../types/types';
-import http from 'http';
 
 // Mock models
 jest.mock('../../models/questions.model');
@@ -37,12 +37,11 @@ app.use('/answer', answerController(mockSocket));
 
 // Create a server to close after tests
 const server = http.createServer(app);
-let testServer: any;
+const testServer = supertest(server);
 
 // Setup before tests
 beforeAll(done => {
   server.listen(0, () => {
-    testServer = supertest(server);
     done();
   });
 });

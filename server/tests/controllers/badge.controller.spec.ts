@@ -1,13 +1,13 @@
 import mongoose from 'mongoose';
 import supertest from 'supertest';
 import express from 'express';
-import { createServer, Server as HttpServer } from 'http';
+import { createServer } from 'http';
 import * as badgeService from '../../services/badge.service';
 import { DatabaseBadge } from '../../types/types';
 import badgeController from '../../controllers/badge.controller';
 
 // Create mock badges for testing
-const mockBadges: DatabaseBadge[] = [
+const MOCK_BADGES: DatabaseBadge[] = [
   {
     _id: new mongoose.Types.ObjectId(),
     name: 'Curious Cat',
@@ -26,20 +26,16 @@ const mockBadges: DatabaseBadge[] = [
 
 // Create test app with express
 const app = express();
-let httpServer: HttpServer;
-let testServer: any; // Using any temporarily to avoid supertest typing issues
+app.use(express.json());
+app.use('/badge', badgeController());
+
+const httpServer = createServer(app);
+const testServer = supertest(httpServer);
 
 // Setup before all tests
 beforeAll(done => {
-  httpServer = createServer(app);
-
-  // Initialize the badge controller
-  app.use(express.json());
-  app.use('/badge', badgeController());
-
   // Start the server on a random port
   httpServer.listen(0, () => {
-    testServer = supertest(httpServer);
     done();
   });
 });
@@ -64,10 +60,10 @@ const getBadgesByIdsSpy = jest.spyOn(badgeService, 'getBadgesByIds');
 describe('Test badgeController', () => {
   describe('GET /badges', () => {
     it('should return badges when valid badge IDs are provided', async () => {
-      const badgeIds = mockBadges.map(badge => badge._id.toString());
+      const badgeIds = MOCK_BADGES.map(badge => badge._id.toString());
 
       // Mock the getBadgesByIds service function
-      getBadgesByIdsSpy.mockResolvedValue(mockBadges);
+      getBadgesByIdsSpy.mockResolvedValue(MOCK_BADGES);
 
       const response = await testServer.get('/badge/badges').query({ badgeIds });
 
@@ -95,7 +91,7 @@ describe('Test badgeController', () => {
     });
 
     it('should return 500 when the badge service throws an error', async () => {
-      const badgeIds = mockBadges.map(badge => badge._id.toString());
+      const badgeIds = MOCK_BADGES.map(badge => badge._id.toString());
 
       // Mock the getBadgesByIds service function to throw an error
       getBadgesByIdsSpy.mockRejectedValue(new Error('Database error'));
@@ -108,7 +104,7 @@ describe('Test badgeController', () => {
     });
 
     it('should return 500 with generic error message for unknown errors', async () => {
-      const badgeIds = mockBadges.map(badge => badge._id.toString());
+      const badgeIds = MOCK_BADGES.map(badge => badge._id.toString());
 
       // Mock the getBadgesByIds service function to throw a non-Error object
       getBadgesByIdsSpy.mockRejectedValue('Unknown error');

@@ -1,6 +1,5 @@
 import mongoose from 'mongoose';
 import QuestionModel from '../../models/questions.model';
-import TagModel from '../../models/tags.model';
 import UserModel from '../../models/users.model';
 import {
   filterQuestionsBySearch,
@@ -15,7 +14,7 @@ import {
   PopulatedDatabaseQuestion,
   Question,
 } from '../../types/types';
-import { user, safeUser, POPULATED_QUESTIONS } from '../mockData.models';
+import { safeUser, POPULATED_QUESTIONS } from '../mockData.models';
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const mockingoose = require('mockingoose');

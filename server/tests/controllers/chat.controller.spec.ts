@@ -1,6 +1,6 @@
 import mongoose from 'mongoose';
 import supertest from 'supertest';
-import { Server, type Socket as ServerSocket } from 'socket.io';
+import { Server } from 'socket.io';
 import { createServer, Server as HttpServer } from 'http';
 import { io as Client, type Socket as ClientSocket } from 'socket.io-client';
 import { AddressInfo } from 'net';
@@ -24,23 +24,22 @@ const getChatsByParticipantsSpy = jest.spyOn(chatService, 'getChatsByParticipant
 
 // Create test app with express
 const app = express();
-let server: HttpServer;
-let testServer: any; // Using any temporarily to avoid supertest typing issues
+app.use(express.json());
+
+// Create socket.io server for chat controller
+const server = createServer(app);
+const io = new Server(server);
+
+// Initialize the chat controller with the socket
+app.use('/chat', chatController(io));
+
+// Create the test server instance
+const testServer = supertest(server);
 
 // Setup before all tests
 beforeAll(done => {
-  server = createServer(app);
-
-  // Create socket.io server for chat controller
-  const io = new Server(server);
-
-  // Initialize the chat controller with the socket
-  app.use(express.json());
-  app.use('/chat', chatController(io));
-
   // Start the server on a random port
   server.listen(0, () => {
-    testServer = supertest(server);
     done();
   });
 });

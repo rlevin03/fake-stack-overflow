@@ -598,13 +598,6 @@ describe('decayInactiveUserPoints', () => {
   });
 
   it('should not update users who are active within the 60-day threshold', async () => {
-    // Create a mix of active and inactive users
-    const thirtyDaysAgo = new Date('2024-03-16'); // Only 30 days ago (active)
-
-    const users = [
-      { ...user, _id: new mongoose.Types.ObjectId(), points: 100, lastActive: thirtyDaysAgo },
-    ];
-
     mockingoose(UserModel).toReturn([], 'find');
 
     const updateOneSpy = jest.spyOn(UserModel, 'updateOne');

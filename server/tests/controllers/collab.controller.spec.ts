@@ -2,10 +2,10 @@ import { Server as SocketServer } from 'socket.io';
 import { Server as HttpServer, createServer } from 'http';
 import { Socket, io as ioc } from 'socket.io-client';
 import { AddressInfo } from 'net';
+import { spawn } from 'child_process';
 import * as sessionService from '../../services/session.service';
 import registerCollabHandlers from '../../controllers/collab.controller';
-import { spawn } from 'child_process';
-import { SessionResponse } from '../../types/types';
+import { SessionResponse, FakeSOSocket } from '../../types/types';
 
 // Mocks
 jest.mock('child_process', () => ({
@@ -13,21 +13,57 @@ jest.mock('child_process', () => ({
 }));
 jest.mock('../../services/session.service');
 
-// Mock types
-type MockSocket = {
-  on: jest.Mock;
+// Socket and event handler types
+interface MockClientSocket {
+  id: string;
   join: jest.Mock;
   to: jest.Mock;
   emit: jest.Mock;
-  leave: jest.Mock;
-  id: string;
-};
+  on: jest.Mock;
+  leave?: jest.Mock;
+}
+
+interface MockSocketTo {
+  emit: jest.Mock;
+}
+
+interface MockSpawnProcess {
+  stdout: { on: jest.Mock };
+  stderr: { on: jest.Mock };
+  on: jest.Mock;
+}
+
+// Event handler types
+type JoinSessionHandler = (sessionId: string, username: string) => void;
+type CodeChangeHandler = (params: {
+  codingSessionID: string;
+  code: string;
+  username: string;
+}) => void;
+type CursorChangeHandler = (params: {
+  codingSessionID: string;
+  cursorPosition: { lineNumber: number; column: number };
+  username: string;
+}) => void;
+type ExecuteCodeHandler = (params: {
+  codingSessionID: string;
+  code: string;
+  username: string;
+}) => void;
+type EditHighlightHandler = (params: {
+  codingSessionID: string;
+  lineNumber: number | string;
+  editorId: string;
+  timestamp: number;
+}) => void;
+type EditorErrorHandler = (params: { codingSessionID: string; errorMessage: string }) => void;
+type LeaveSessionHandler = (sessionId: string, username: string) => void;
+type DisconnectHandler = () => void;
 
 // Test variables
 let httpServer: HttpServer;
 let ioServer: SocketServer;
 let clientSocket: Socket;
-let serverSocket: MockSocket;
 let clientSocketURL: string;
 
 const mockAddVersionToSession = jest.spyOn(sessionService, 'addVersionToSession');
@@ -39,7 +75,7 @@ const mockStdout = {
 const mockStderr = {
   on: jest.fn(),
 };
-const mockProcess = {
+const mockProcess: MockSpawnProcess = {
   stdout: mockStdout,
   stderr: mockStderr,
   on: jest.fn(),
@@ -56,25 +92,13 @@ beforeAll(done => {
     clientSocketURL = `http://localhost:${address.port}`;
 
     // Register collab handlers with the Socket.IO server
-    registerCollabHandlers(ioServer);
+    registerCollabHandlers(ioServer as FakeSOSocket);
 
     // Create client socket
     clientSocket = ioc(clientSocketURL);
 
     // When client connects to server
     clientSocket.on('connect', () => {
-      // Save reference to server socket
-      const mockTo = jest.fn(() => ({ emit: jest.fn() }));
-
-      serverSocket = {
-        id: 'test-socket-id',
-        on: jest.fn(),
-        join: jest.fn(),
-        to: mockTo,
-        emit: jest.fn(),
-        leave: jest.fn(),
-      };
-
       // Setup the spawn mock
       (spawn as jest.Mock).mockReturnValue(mockProcess);
 
@@ -100,11 +124,13 @@ beforeEach(() => {
 describe('Collab Controller', () => {
   describe('joinSession event', () => {
     it('should handle a user joining a session', done => {
-      // Extract the connection handler
-      const connectionHandler = ioServer.listeners('connection')[0] as (socket: any) => void;
+      // Get the connection handler and convert safely
+      const connectionHandler = ioServer.listeners('connection')[0] as unknown as (
+        socket: MockClientSocket,
+      ) => void;
 
       // Create a mock client socket
-      const mockClientSocket = {
+      const mockClientSocket: MockClientSocket = {
         id: 'mock-client-id',
         join: jest.fn(),
         to: jest.fn().mockReturnThis(),
@@ -117,8 +143,8 @@ describe('Collab Controller', () => {
 
       // Extract the joinSession handler
       const joinSessionHandler = mockClientSocket.on.mock.calls.find(
-        (call: any[]) => call[0] === 'joinSession',
-      )?.[1];
+        call => call[0] === 'joinSession',
+      )?.[1] as JoinSessionHandler;
 
       // Verify handler exists
       expect(joinSessionHandler).toBeDefined();
@@ -142,11 +168,13 @@ describe('Collab Controller', () => {
       // Setup mock for addVersionToSession
       mockAddVersionToSession.mockResolvedValue({} as SessionResponse);
 
-      // Extract the connection handler
-      const connectionHandler = ioServer.listeners('connection')[0] as (socket: any) => void;
+      // Get the connection handler and convert safely
+      const connectionHandler = ioServer.listeners('connection')[0] as unknown as (
+        socket: MockClientSocket,
+      ) => void;
 
       // Create a mock client socket
-      const mockClientSocket = {
+      const mockClientSocket: MockClientSocket = {
         id: 'mock-client-id',
         join: jest.fn(),
         to: jest.fn().mockReturnThis(),
@@ -159,8 +187,8 @@ describe('Collab Controller', () => {
 
       // Extract the codeChange handler
       const codeChangeHandler = mockClientSocket.on.mock.calls.find(
-        (call: any[]) => call[0] === 'codeChange',
-      )?.[1];
+        call => call[0] === 'codeChange',
+      )?.[1] as CodeChangeHandler;
 
       // Verify handler exists
       expect(codeChangeHandler).toBeDefined();
@@ -185,11 +213,13 @@ describe('Collab Controller', () => {
 
   describe('cursorChange event', () => {
     it('should handle cursor position changes', done => {
-      // Extract the connection handler
-      const connectionHandler = ioServer.listeners('connection')[0] as (socket: any) => void;
+      // Get the connection handler and convert safely
+      const connectionHandler = ioServer.listeners('connection')[0] as unknown as (
+        socket: MockClientSocket,
+      ) => void;
 
       // Create a mock client socket
-      const mockClientSocket = {
+      const mockClientSocket: MockClientSocket = {
         id: 'mock-client-id',
         join: jest.fn(),
         to: jest.fn().mockReturnThis(),
@@ -202,8 +232,8 @@ describe('Collab Controller', () => {
 
       // Extract the cursorChange handler
       const cursorChangeHandler = mockClientSocket.on.mock.calls.find(
-        (call: any[]) => call[0] === 'cursorChange',
-      )?.[1];
+        call => call[0] === 'cursorChange',
+      )?.[1] as CursorChangeHandler;
 
       // Verify handler exists
       expect(cursorChangeHandler).toBeDefined();
@@ -243,13 +273,15 @@ describe('Collab Controller', () => {
         on: jest.fn((event, callback) => {
           if (event === 'close') callback(0);
         }),
-      });
+      } as MockSpawnProcess);
 
-      // Extract the connection handler
-      const connectionHandler = ioServer.listeners('connection')[0] as (socket: any) => void;
+      // Get the connection handler and convert safely
+      const connectionHandler = ioServer.listeners('connection')[0] as unknown as (
+        socket: MockClientSocket,
+      ) => void;
 
       // Create a mock client socket
-      const mockClientSocket = {
+      const mockClientSocket: MockClientSocket = {
         id: 'mock-client-id',
         join: jest.fn(),
         to: jest.fn().mockReturnThis(),
@@ -260,25 +292,22 @@ describe('Collab Controller', () => {
       // Mock the server's to method
       const mockServerTo = jest.fn().mockReturnValue({
         emit: jest.fn(),
-      });
-      const mockServerSocket = {
-        to: mockServerTo,
-      };
+      } as MockSocketTo);
 
       // Call the connection handler with our mock socket
       connectionHandler(mockClientSocket);
 
       // Extract the executeCode handler
       const executeCodeHandler = mockClientSocket.on.mock.calls.find(
-        (call: any[]) => call[0] === 'executeCode',
-      )?.[1];
+        call => call[0] === 'executeCode',
+      )?.[1] as ExecuteCodeHandler;
 
       // Verify handler exists
       expect(executeCodeHandler).toBeDefined();
 
       // Setup for handler mocking socket.to
       const originalSocketTo = ioServer.to;
-      ioServer.to = mockServerTo;
+      ioServer.to = mockServerTo as typeof ioServer.to;
 
       // Call the executeCode handler
       const params = {
@@ -309,13 +338,15 @@ describe('Collab Controller', () => {
         on: jest.fn((event, callback) => {
           if (event === 'close') callback(1);
         }),
-      });
+      } as MockSpawnProcess);
 
-      // Extract the connection handler
-      const connectionHandler = ioServer.listeners('connection')[0] as (socket: any) => void;
+      // Get the connection handler and convert safely
+      const connectionHandler = ioServer.listeners('connection')[0] as unknown as (
+        socket: MockClientSocket,
+      ) => void;
 
       // Create a mock client socket
-      const mockClientSocket = {
+      const mockClientSocket: MockClientSocket = {
         id: 'mock-client-id',
         join: jest.fn(),
         to: jest.fn().mockReturnThis(),
@@ -326,25 +357,22 @@ describe('Collab Controller', () => {
       // Mock the server's to method
       const mockServerTo = jest.fn().mockReturnValue({
         emit: jest.fn(),
-      });
-      const mockServerSocket = {
-        to: mockServerTo,
-      };
+      } as MockSocketTo);
 
       // Call the connection handler with our mock socket
       connectionHandler(mockClientSocket);
 
       // Extract the executeCode handler
       const executeCodeHandler = mockClientSocket.on.mock.calls.find(
-        (call: any[]) => call[0] === 'executeCode',
-      )?.[1];
+        call => call[0] === 'executeCode',
+      )?.[1] as ExecuteCodeHandler;
 
       // Verify handler exists
       expect(executeCodeHandler).toBeDefined();
 
       // Setup for handler mocking socket.to
       const originalSocketTo = ioServer.to;
-      ioServer.to = mockServerTo;
+      ioServer.to = mockServerTo as typeof ioServer.to;
 
       // Call the executeCode handler
       const params = {
@@ -373,11 +401,13 @@ describe('Collab Controller', () => {
 
   describe('editHighlight event', () => {
     it('should handle edit highlights', done => {
-      // Extract the connection handler
-      const connectionHandler = ioServer.listeners('connection')[0] as (socket: any) => void;
+      // Get the connection handler and convert safely
+      const connectionHandler = ioServer.listeners('connection')[0] as unknown as (
+        socket: MockClientSocket,
+      ) => void;
 
       // Create a mock client socket
-      const mockClientSocket = {
+      const mockClientSocket: MockClientSocket = {
         id: 'mock-client-id',
         join: jest.fn(),
         to: jest.fn().mockReturnThis(),
@@ -390,8 +420,8 @@ describe('Collab Controller', () => {
 
       // Extract the editHighlight handler
       const editHighlightHandler = mockClientSocket.on.mock.calls.find(
-        (call: any[]) => call[0] === 'editHighlight',
-      )?.[1];
+        call => call[0] === 'editHighlight',
+      )?.[1] as EditHighlightHandler;
 
       // Verify handler exists
       expect(editHighlightHandler).toBeDefined();
@@ -417,11 +447,13 @@ describe('Collab Controller', () => {
     });
 
     it('should validate highlight parameters', done => {
-      // Extract the connection handler
-      const connectionHandler = ioServer.listeners('connection')[0] as (socket: any) => void;
+      // Get the connection handler and convert safely
+      const connectionHandler = ioServer.listeners('connection')[0] as unknown as (
+        socket: MockClientSocket,
+      ) => void;
 
       // Create a mock client socket
-      const mockClientSocket = {
+      const mockClientSocket: MockClientSocket = {
         id: 'mock-client-id',
         join: jest.fn(),
         to: jest.fn().mockReturnThis(),
@@ -434,8 +466,8 @@ describe('Collab Controller', () => {
 
       // Extract the editHighlight handler
       const editHighlightHandler = mockClientSocket.on.mock.calls.find(
-        (call: any[]) => call[0] === 'editHighlight',
-      )?.[1];
+        call => call[0] === 'editHighlight',
+      )?.[1] as EditHighlightHandler;
 
       // Verify handler exists
       expect(editHighlightHandler).toBeDefined();
@@ -443,7 +475,7 @@ describe('Collab Controller', () => {
       // Call the editHighlight handler with invalid params
       const invalidParams = {
         codingSessionID: 'test-session',
-        lineNumber: 'not-a-number' as any,
+        lineNumber: 'not-a-number',
         editorId: 'editor-1',
         timestamp: Date.now(),
       };
@@ -458,11 +490,13 @@ describe('Collab Controller', () => {
 
   describe('editorError event', () => {
     it('should handle editor errors', done => {
-      // Extract the connection handler
-      const connectionHandler = ioServer.listeners('connection')[0] as (socket: any) => void;
+      // Get the connection handler and convert safely
+      const connectionHandler = ioServer.listeners('connection')[0] as unknown as (
+        socket: MockClientSocket,
+      ) => void;
 
       // Create a mock client socket
-      const mockClientSocket = {
+      const mockClientSocket: MockClientSocket = {
         id: 'mock-client-id',
         join: jest.fn(),
         to: jest.fn().mockReturnThis(),
@@ -475,8 +509,8 @@ describe('Collab Controller', () => {
 
       // Extract the editorError handler
       const editorErrorHandler = mockClientSocket.on.mock.calls.find(
-        (call: any[]) => call[0] === 'editorError',
-      )?.[1];
+        call => call[0] === 'editorError',
+      )?.[1] as EditorErrorHandler;
 
       // Verify handler exists
       expect(editorErrorHandler).toBeDefined();
@@ -498,11 +532,13 @@ describe('Collab Controller', () => {
 
   describe('leaveSession event', () => {
     it('should handle a user leaving a session', done => {
-      // Extract the connection handler
-      const connectionHandler = ioServer.listeners('connection')[0] as (socket: any) => void;
+      // Get the connection handler and convert safely
+      const connectionHandler = ioServer.listeners('connection')[0] as unknown as (
+        socket: MockClientSocket,
+      ) => void;
 
       // Create a mock client socket
-      const mockClientSocket = {
+      const mockClientSocket: MockClientSocket = {
         id: 'mock-client-id',
         join: jest.fn(),
         to: jest.fn().mockReturnThis(),
@@ -516,8 +552,8 @@ describe('Collab Controller', () => {
 
       // Extract the leaveSession handler
       const leaveSessionHandler = mockClientSocket.on.mock.calls.find(
-        (call: any[]) => call[0] === 'leaveSession',
-      )?.[1];
+        call => call[0] === 'leaveSession',
+      )?.[1] as LeaveSessionHandler;
 
       // Verify handler exists
       expect(leaveSessionHandler).toBeDefined();
@@ -538,12 +574,17 @@ describe('Collab Controller', () => {
 
   describe('disconnect event', () => {
     it('should handle user disconnection', done => {
-      // Extract the connection handler
-      const connectionHandler = ioServer.listeners('connection')[0] as (socket: any) => void;
+      // Get the connection handler and convert safely
+      const connectionHandler = ioServer.listeners('connection')[0] as unknown as (
+        socket: MockClientSocket,
+      ) => void;
 
       // Create a mock client socket
-      const mockClientSocket = {
+      const mockClientSocket: MockClientSocket = {
         id: 'mock-client-id',
+        join: jest.fn(),
+        to: jest.fn(),
+        emit: jest.fn(),
         on: jest.fn(),
       };
 
@@ -552,8 +593,8 @@ describe('Collab Controller', () => {
 
       // Extract the disconnect handler
       const disconnectHandler = mockClientSocket.on.mock.calls.find(
-        (call: any[]) => call[0] === 'disconnect',
-      )?.[1];
+        call => call[0] === 'disconnect',
+      )?.[1] as DisconnectHandler;
 
       // Verify handler exists
       expect(disconnectHandler).toBeDefined();

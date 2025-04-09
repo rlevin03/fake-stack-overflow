@@ -1,6 +1,6 @@
 import supertest from 'supertest';
 import { Server, type Socket as ServerSocket } from 'socket.io';
-import { Server as HTTPServer, createServer } from 'http';
+import { createServer } from 'http';
 import { io as Client, type Socket as ClientSocket } from 'socket.io-client';
 import { AddressInfo } from 'net';
 import express from 'express';
@@ -15,28 +15,32 @@ const mockGameManager = GameManager.getInstance();
 
 // Create test app with express
 const app = express();
-let httpServer: HTTPServer;
-let io: Server;
+app.use(express.json());
+
+// Create HTTP server
+const httpServer = createServer(app);
+
+// Create socket.io server
+const io = new Server(httpServer);
+
+// Mock socket for controller
+const mockSocket = io as unknown as FakeSOSocket;
+
+// Initialize the game controller with the socket
+app.use('/games', gameController(mockSocket));
+
+// Create the test server with supertest
+const testServer = supertest(httpServer);
+
+// Client socket for socket.io tests
 let clientSocket: ClientSocket;
 let serverSocket: ServerSocket;
-let testServer: any; // Using any temporarily to avoid supertest typing issues
 
 // Setup before all tests for REST endpoints
 beforeAll(done => {
-  httpServer = createServer(app);
-  io = new Server(httpServer);
-
-  // Mock socket for controller
-  const mockSocket = io as unknown as FakeSOSocket;
-
-  // Initialize the game controller with the socket
-  app.use(express.json());
-  app.use('/games', gameController(mockSocket));
-
   // Start the server on a random port
   httpServer.listen(() => {
     const { port } = httpServer.address() as AddressInfo;
-    testServer = supertest(httpServer);
 
     // Setup client socket for socket.io tests
     clientSocket = Client(`http://localhost:${port}`);
@@ -64,11 +68,7 @@ afterAll(done => {
     io.close();
   }
 
-  if (httpServer) {
-    httpServer.close(done);
-  } else {
-    done();
-  }
+  httpServer.close(done);
 });
 
 // Reset mocks before each test
