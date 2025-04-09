@@ -1,9 +1,79 @@
 [![Review Assignment Due Date](https://classroom.github.com/assets/deadline-readme-button-22041afd0340ce965d47ae6ef1cefeee28c7c493a6346c4f15d667ab976d596c.svg)](https://classroom.github.com/a/fE-a_qEp)
-The individual and team project for this class are designed to mirror the experiences of a software engineer joining a new development team: you will be “onboarded” to our codebase, make several individual contributions, and then form a team to propose, develop and implement new features. The codebase that we’ll be developing on is a Fake Stack Overflow project (let’s call it HuskyFlow). You will get an opportunity to work with the starter code which provides basic skeleton for the app and then additional features will be proposed and implemented by you! All implementation will take place in the TypeScript programming language, using React for the user interface.
+The individual and team project for this class are designed to mirror the experiences of a software engineer joining a new development team: you will be "onboarded" to our codebase, make several individual contributions, and then form a team to propose, develop and implement new features. The codebase that we'll be developing on is a Fake Stack Overflow project (let's call it HuskyFlow). You will get an opportunity to work with the starter code which provides basic skeleton for the app and then additional features will be proposed and implemented by you! All implementation will take place in the TypeScript programming language, using React for the user interface.
 
 ## Getting Started
 
 Run `npm install` in the root directory to install all dependencies for the `client`, `server`, and `shared` folders.
+
+### Installing Dependencies
+To install dependencies separately:
+```
+cd server
+npm install
+cd ../client
+npm install
+```
+
+### Setting Up MongoDB
+1. Create a MongoDB account
+2. Navigate to mongodb.com and create your account
+3. The free tier will be more than enough for your needs, and the name doesn't matter all that much
+4. Click on "Create Deployment" and be sure to save your connection string with your visible password for the time being
+5. For convenience, in the left navigation, click on "Network Access"
+6. Allow access from any IP address so that you don't have to approve every new address
+
+### Populating the Database
+1. Go to the server directory in your repository:
+   ```
+   cd server
+   ```
+   Or if you are in the client directory:
+   ```
+   cd ../server
+   ```
+2. Then populate the database by running:
+   ```
+   npx ts-node populate_db.ts <your connection string>/fake_so
+   ```
+
+### Running Locally
+To start the application locally:
+1. Start the server:
+   ```
+   cd server
+   npm run start
+   ```
+2. In a separate terminal, start the client:
+   ```
+   cd client
+   npm run start
+   ```
+
+### Configuring Environment Variables
+Create `.env` files in both the server and client folders with the following fields:
+
+For the client `.env`:
+```
+REACT_APP_SERVER_URL=<the backend deployment link>
+```
+
+For the server `.env`:
+```
+MONGODB_URI=<your connection string>
+CLIENT_URL=<the frontend deployment link>
+PORT=8000
+GEMINI_API_KEY=<a random assortment of letters and numbers>
+```
+
+### Setting Up Deployment
+1. Create a Render account
+2. Create deployments for both the frontend and backend
+3. You can verify that the backend works by clicking on the link for the backend deployment. If it shows "hello world," then it's running
+4. For the frontend, you should see the login page at the deployment link
+
+### Deployment Links
+- Frontend: https://cs4530-s25-605.onrender.com/
+- Backend: https://cs4530-s25-605-api.onrender.com/
 
 { : .note } Refer to [IP1](https://neu-se.github.io/CS4530-Spring-2025/assignments/ip1) and [IP2](https://neu-se.github.io/CS4530-Spring-2025/assignments/ip2) for further instructions related to setting up MongoDB, setting environment variables, and running the client and server.
 

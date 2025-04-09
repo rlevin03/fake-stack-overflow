@@ -1,7 +1,7 @@
 import api from './config';
 import { Comment, DatabaseComment } from '../types/types';
 
-const COMMENT_API_URL = `https://cs4530-s25-605-api.onrender.com/comment`;
+const COMMENT_API_URL = `${process.env.REACT_APP_SERVER_URL}/comment`;
 
 /**
  * Interface extending the request body when adding a comment to a question or an answer, which contains:

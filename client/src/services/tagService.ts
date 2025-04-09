@@ -1,7 +1,7 @@
 import { DatabaseTag, TagData } from '../types/types';
 import api from './config';
 
-const TAG_API_URL = `https://cs4530-s25-605-api.onrender.com/tag`;
+const TAG_API_URL = `${process.env.REACT_APP_SERVER_URL}/tag`;
 
 /**
  * Function to get tags with the number of associated questions.

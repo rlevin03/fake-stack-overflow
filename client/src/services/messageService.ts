@@ -1,7 +1,7 @@
 import api from './config';
 import { DatabaseMessage, Message } from '../types/types';
 
-const MESSAGE_API_URL = `https://cs4530-s25-605-api.onrender.com/messaging`;
+const MESSAGE_API_URL = `${process.env.REACT_APP_SERVER_URL}/messaging`;
 
 /**
  * Interface extending the request body when adding a message, which contains:
