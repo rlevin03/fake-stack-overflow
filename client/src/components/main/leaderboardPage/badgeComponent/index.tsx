@@ -14,8 +14,6 @@ const badgeIcons: Record<string, string> = {
   'Lightning Responder': '⚡',
   'Respected Voice': '🎤',
   'Peoples Champion': '👑',
-  'Pair Programmer': '👥',
-  'The Historian': '📜',
 };
 
 const BadgeComponent: React.FC<BadgeComponentProps> = ({ badgeIds }) => {

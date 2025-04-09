@@ -8,13 +8,11 @@ export const BadgeName = {
   LIGHTNING_RESPONDER: 'Lightning Responder' as BadgeNameType,
   RESPECTED_VOICE: 'Respected Voice' as BadgeNameType,
   PEOPLES_CHAMPION: 'Peoples Champion' as BadgeNameType,
-  PAIR_PROGRAMMER: 'Pair Programmer' as BadgeNameType,
-  THE_HISTORIAN: 'The Historian' as BadgeNameType,
 } as const;
 
 // eslint-disable-next-line @typescript-eslint/naming-convention
 export const BadgeDescription = {
-  CURIOUS_CAT: 'Asked 10+ questions that received at least one upvote.' as BadgeDescriptionType,
+  CURIOUS_CAT: 'Upvoted 10+ questions' as BadgeDescriptionType,
   HELPING_HAND: 'Provided 5+ answers' as BadgeDescriptionType,
   LIFELINE:
     'Answered a question that was unanswered for more than 24 hours.' as BadgeDescriptionType,
@@ -23,7 +21,4 @@ export const BadgeDescription = {
   RESPECTED_VOICE:
     'Accumulated 500+ reputation points from upvotes on answers.' as BadgeDescriptionType,
   PEOPLES_CHAMPION: 'Received 50+ upvotes on a single answer.' as BadgeDescriptionType,
-  PAIR_PROGRAMMER: 'Participated in a live collaborative coding session.' as BadgeDescriptionType,
-  THE_HISTORIAN:
-    'Reverted code to a previous version using the edit history feature.' as BadgeDescriptionType,
 } as const;

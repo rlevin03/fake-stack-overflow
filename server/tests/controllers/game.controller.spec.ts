@@ -1,9 +1,9 @@
 import supertest from 'supertest';
 import { Server, type Socket as ServerSocket } from 'socket.io';
-import { Server as HTTPServer, createServer } from 'http';
+import { createServer } from 'http';
 import { io as Client, type Socket as ClientSocket } from 'socket.io-client';
 import { AddressInfo } from 'net';
-import { app } from '../../app';
+import express from 'express';
 import GameManager from '../../services/games/gameManager';
 import { FakeSOSocket, GameInstance, NimGameState } from '../../types/types';
 import * as util from '../../services/game.service';
@@ -13,6 +13,69 @@ import { MAX_NIM_OBJECTS } from '../../types/constants';
 
 const mockGameManager = GameManager.getInstance();
 
+// Create test app with express
+const app = express();
+app.use(express.json());
+
+// Create HTTP server
+const httpServer = createServer(app);
+
+// Create socket.io server
+const io = new Server(httpServer);
+
+// Mock socket for controller
+const mockSocket = io as unknown as FakeSOSocket;
+
+// Initialize the game controller with the socket
+app.use('/games', gameController(mockSocket));
+
+// Create the test server with supertest
+const testServer = supertest(httpServer);
+
+// Client socket for socket.io tests
+let clientSocket: ClientSocket;
+let serverSocket: ServerSocket;
+
+// Setup before all tests for REST endpoints
+beforeAll(done => {
+  // Start the server on a random port
+  httpServer.listen(() => {
+    const { port } = httpServer.address() as AddressInfo;
+
+    // Setup client socket for socket.io tests
+    clientSocket = Client(`http://localhost:${port}`);
+    io.on('connection', socket => {
+      serverSocket = socket;
+    });
+
+    clientSocket.on('connect', done);
+  });
+});
+
+// Cleanup after all tests
+afterAll(done => {
+  if (clientSocket) {
+    clientSocket.removeAllListeners();
+    clientSocket.disconnect();
+  }
+
+  if (serverSocket) {
+    serverSocket.removeAllListeners();
+    serverSocket.disconnect();
+  }
+
+  if (io) {
+    io.close();
+  }
+
+  httpServer.close(done);
+});
+
+// Reset mocks before each test
+beforeEach(() => {
+  jest.clearAllMocks();
+});
+
 describe('POST /create', () => {
   const addGameSpy = jest.spyOn(mockGameManager, 'addGame');
 
@@ -20,7 +83,7 @@ describe('POST /create', () => {
     it('should return 200 with a game ID when successful', async () => {
       addGameSpy.mockResolvedValueOnce('testGameID');
 
-      const response = await supertest(app).post('/games/create').send({ gameType: 'Nim' });
+      const response = await testServer.post('/games/create').send({ gameType: 'Nim' });
 
       expect(response.status).toEqual(200);
       expect(response.text).toEqual(JSON.stringify('testGameID'));
@@ -30,21 +93,21 @@ describe('POST /create', () => {
 
   describe('400 Invalid Request', () => {
     it('should return 400 for an undefined response body', async () => {
-      const response = await supertest(app).post('/games/create').send(undefined);
+      const response = await testServer.post('/games/create').send(undefined);
 
       expect(response.status).toEqual(400);
       expect(response.text).toEqual('Invalid request');
     });
 
     it('should return 400 for an empty response body', async () => {
-      const response = await supertest(app).post('/games/create').send({});
+      const response = await testServer.post('/games/create').send({});
 
       expect(response.status).toEqual(400);
       expect(response.text).toEqual('Invalid request');
     });
 
     it('should return 400 for an invalid game type', async () => {
-      const response = await supertest(app).post('/games/create').send({ gameType: 'TicTacToe' });
+      const response = await testServer.post('/games/create').send({ gameType: 'TicTacToe' });
 
       expect(response.status).toEqual(400);
       expect(response.text).toEqual('Invalid request');
@@ -55,7 +118,7 @@ describe('POST /create', () => {
     it('should return 500 if addGame fails', async () => {
       addGameSpy.mockResolvedValueOnce({ error: 'test error' });
 
-      const response = await supertest(app).post('/games/create').send({ gameType: 'Nim' });
+      const response = await testServer.post('/games/create').send({ gameType: 'Nim' });
 
       expect(response.status).toEqual(500);
       expect(response.text).toContain('Error when creating game: test error');
@@ -65,7 +128,7 @@ describe('POST /create', () => {
     it('should return 500 if addGame throws an error', async () => {
       addGameSpy.mockRejectedValueOnce(new Error('test error'));
 
-      const response = await supertest(app).post('/games/create').send({ gameType: 'Nim' });
+      const response = await testServer.post('/games/create').send({ gameType: 'Nim' });
 
       expect(response.status).toEqual(500);
       expect(response.text).toContain('Error when creating game: test error');
@@ -87,7 +150,7 @@ describe('POST /join', () => {
       };
       joinGameSpy.mockResolvedValueOnce(gameState);
 
-      const response = await supertest(app)
+      const response = await testServer
         .post('/games/join')
         .send({ gameID: 'testGameID', playerID: 'user1' });
 
@@ -99,28 +162,28 @@ describe('POST /join', () => {
 
   describe('400 Invalid Request', () => {
     it('should return 400 for an undefined response body', async () => {
-      const response = await supertest(app).post('/games/join').send(undefined);
+      const response = await testServer.post('/games/join').send(undefined);
 
       expect(response.status).toEqual(400);
       expect(response.text).toEqual('Invalid request');
     });
 
     it('should return 400 for an empty response body', async () => {
-      const response = await supertest(app).post('/games/join').send({});
+      const response = await testServer.post('/games/join').send({});
 
       expect(response.status).toEqual(400);
       expect(response.text).toEqual('Invalid request');
     });
 
     it('should return 400 for a missing gameID', async () => {
-      const response = await supertest(app).post('/games/join').send({ playerID: 'user1' });
+      const response = await testServer.post('/games/join').send({ playerID: 'user1' });
 
       expect(response.status).toEqual(400);
       expect(response.text).toEqual('Invalid request');
     });
 
     it('should return 400 for a missing playerID', async () => {
-      const response = await supertest(app).post('/games/join').send({ gameID: 'testGameID' });
+      const response = await testServer.post('/games/join').send({ gameID: 'testGameID' });
 
       expect(response.status).toEqual(400);
       expect(response.text).toEqual('Invalid request');
@@ -131,7 +194,7 @@ describe('POST /join', () => {
     it('should return 500 if joinGame fails', async () => {
       joinGameSpy.mockResolvedValueOnce({ error: 'test error' });
 
-      const response = await supertest(app)
+      const response = await testServer
         .post('/games/join')
         .send({ gameID: 'testGameID', playerID: 'user1' });
 
@@ -142,7 +205,7 @@ describe('POST /join', () => {
     it('should return 500 if joinGame throws an error', async () => {
       joinGameSpy.mockRejectedValueOnce(new Error('test error'));
 
-      const response = await supertest(app)
+      const response = await testServer
         .post('/games/join')
         .send({ gameID: 'testGameID', playerID: 'user1' });
 
@@ -165,7 +228,7 @@ describe('POST /leave', () => {
       };
       leaveGameSpy.mockResolvedValueOnce(gameState);
 
-      const response = await supertest(app)
+      const response = await testServer
         .post('/games/leave')
         .send({ gameID: 'testGameID', playerID: 'user1' });
 
@@ -177,28 +240,28 @@ describe('POST /leave', () => {
 
   describe('400 Invalid Request', () => {
     it('should return 400 for an undefined response body', async () => {
-      const response = await supertest(app).post('/games/leave').send(undefined);
+      const response = await testServer.post('/games/leave').send(undefined);
 
       expect(response.status).toEqual(400);
       expect(response.text).toEqual('Invalid request');
     });
 
     it('should return 400 for an empty response body', async () => {
-      const response = await supertest(app).post('/games/leave').send({});
+      const response = await testServer.post('/games/leave').send({});
 
       expect(response.status).toEqual(400);
       expect(response.text).toEqual('Invalid request');
     });
 
     it('should return 400 for a missing gameID', async () => {
-      const response = await supertest(app).post('/games/leave').send({ playerID: 'user1' });
+      const response = await testServer.post('/games/leave').send({ playerID: 'user1' });
 
       expect(response.status).toEqual(400);
       expect(response.text).toEqual('Invalid request');
     });
 
     it('should return 400 for a missing playerID', async () => {
-      const response = await supertest(app).post('/games/leave').send({ gameID: 'testGameID' });
+      const response = await testServer.post('/games/leave').send({ gameID: 'testGameID' });
 
       expect(response.status).toEqual(400);
       expect(response.text).toEqual('Invalid request');
@@ -209,7 +272,7 @@ describe('POST /leave', () => {
     it('should return 500 if leaveGame fails', async () => {
       leaveGameSpy.mockResolvedValueOnce({ error: 'test error' });
 
-      const response = await supertest(app)
+      const response = await testServer
         .post('/games/leave')
         .send({ gameID: 'testGameID', playerID: 'user1' });
 
@@ -220,7 +283,7 @@ describe('POST /leave', () => {
     it('should return 500 if leaveGame throws an error', async () => {
       leaveGameSpy.mockRejectedValueOnce(new Error('test error'));
 
-      const response = await supertest(app)
+      const response = await testServer
         .post('/games/leave')
         .send({ gameID: 'testGameID', playerID: 'user1' });
 
@@ -244,7 +307,7 @@ describe('GET /games', () => {
     it('should return 200 with a game state array when successful', async () => {
       findGamesSpy.mockResolvedValueOnce([gameState]);
 
-      const response = await supertest(app)
+      const response = await testServer
         .get('/games/games')
         .query({ gameType: 'Nim', status: 'WAITING_TO_START' });
 
@@ -256,7 +319,7 @@ describe('GET /games', () => {
     it('should return 200 with an empty game state array when successful', async () => {
       findGamesSpy.mockResolvedValueOnce([]);
 
-      const response = await supertest(app)
+      const response = await testServer
         .get('/games/games')
         .query({ gameType: 'Nim', status: 'IN_PROGRESS' });
 
@@ -270,7 +333,7 @@ describe('GET /games', () => {
     it('should return 500 if leaveGame throws an error', async () => {
       findGamesSpy.mockRejectedValueOnce(new Error('test error'));
 
-      const response = await supertest(app)
+      const response = await testServer
         .get('/games/games')
         .query({ gameType: 'Nim', status: 'WAITING_TO_START' });
 
@@ -281,33 +344,12 @@ describe('GET /games', () => {
 });
 
 describe('playMove & socket handlers', () => {
-  let httpServer: HTTPServer;
-  let io: FakeSOSocket;
-  let clientSocket: ClientSocket;
-  let serverSocket: ServerSocket;
-
   let mockNimGame: NimGame;
   let getGameSpy: jest.SpyInstance;
   let applyMoveSpy: jest.SpyInstance;
   let toModelSpy: jest.SpyInstance;
   let saveGameStateSpy: jest.SpyInstance;
   let removeGameSpy: jest.SpyInstance;
-
-  beforeAll(done => {
-    httpServer = createServer();
-    io = new Server(httpServer);
-    gameController(io);
-
-    httpServer.listen(() => {
-      const { port } = httpServer.address() as AddressInfo;
-      clientSocket = Client(`http://localhost:${port}`);
-      io.on('connection', socket => {
-        serverSocket = socket;
-      });
-
-      clientSocket.on('connect', done);
-    });
-  });
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -331,17 +373,6 @@ describe('playMove & socket handlers', () => {
 
     saveGameStateSpy = jest.spyOn(mockNimGame, 'saveGameState').mockResolvedValue(undefined);
     removeGameSpy = jest.spyOn(mockGameManager, 'removeGame');
-  });
-
-  afterAll(done => {
-    clientSocket.removeAllListeners();
-    clientSocket.disconnect();
-    if (serverSocket) {
-      serverSocket.removeAllListeners();
-      serverSocket.disconnect();
-    }
-    io.close();
-    httpServer.close(() => done());
   });
 
   it('should join a game when "joinGame" event is emitted', async () => {

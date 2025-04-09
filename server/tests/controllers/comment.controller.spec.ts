@@ -1,12 +1,54 @@
 import mongoose from 'mongoose';
 import supertest from 'supertest';
-import { app } from '../../app';
+import express from 'express';
+import { createServer } from 'http';
+import commentController from '../../controllers/comment.controller';
 import * as commentUtil from '../../services/comment.service';
 import * as databaseUtil from '../../utils/database.util';
+import { FakeSOSocket } from '../../types/types';
 
+// Mock service functions
 const saveCommentSpy = jest.spyOn(commentUtil, 'saveComment');
 const addCommentSpy = jest.spyOn(commentUtil, 'addComment');
 const popDocSpy = jest.spyOn(databaseUtil, 'populateDocument');
+
+// Create test app with express
+const app = express();
+app.use(express.json());
+
+// Create a proper mock that satisfies the FakeSOSocket type
+const mockEmit = jest.fn();
+const mockSocket = {
+  emit: mockEmit,
+} as unknown as FakeSOSocket;
+
+// Initialize the comment controller
+app.use('/comment', commentController(mockSocket));
+
+// Create server
+const server = createServer(app);
+
+// Create the test server with supertest
+const testServer = supertest(server);
+
+// Setup before all tests
+beforeAll(done => {
+  // Start the server on a random port
+  server.listen(0, () => {
+    done();
+  });
+});
+
+// Cleanup after all tests
+afterAll(done => {
+  server.close(done);
+});
+
+// Reset mocks before each test
+beforeEach(() => {
+  jest.clearAllMocks();
+  mockEmit.mockClear();
+});
 
 describe('POST /addComment', () => {
   it('should add a new comment to the question', async () => {
@@ -58,7 +100,7 @@ describe('POST /addComment', () => {
       comments: [mockComment],
     });
 
-    const response = await supertest(app).post('/comment/addComment').send(mockReqBody);
+    const response = await testServer.post('/comment/addComment').send(mockReqBody);
 
     expect(response.status).toBe(200);
     expect(response.body).toEqual({
@@ -67,6 +109,14 @@ describe('POST /addComment', () => {
       commentBy: 'dummyUserId',
       commentDateTime: mockComment.commentDateTime.toISOString(),
     });
+
+    // Verify that the socket emit was called
+    expect(mockEmit).toHaveBeenCalledWith(
+      'commentUpdate',
+      expect.objectContaining({
+        type: 'question',
+      }),
+    );
   });
 
   it('should add a new comment to the answer', async () => {
@@ -111,7 +161,7 @@ describe('POST /addComment', () => {
       downVotes: [],
     });
 
-    const response = await supertest(app).post('/comment/addComment').send(mockReqBody);
+    const response = await testServer.post('/comment/addComment').send(mockReqBody);
 
     expect(response.status).toBe(200);
     expect(response.body).toEqual({
@@ -120,6 +170,14 @@ describe('POST /addComment', () => {
       commentBy: 'dummyUserId',
       commentDateTime: mockComment.commentDateTime.toISOString(),
     });
+
+    // Verify that the socket emit was called
+    expect(mockEmit).toHaveBeenCalledWith(
+      'commentUpdate',
+      expect.objectContaining({
+        type: 'answer',
+      }),
+    );
   });
 
   it('should return bad request error if id property missing', async () => {
@@ -131,7 +189,7 @@ describe('POST /addComment', () => {
       },
     };
 
-    const response = await supertest(app).post('/comment/addComment').send(mockReqBody);
+    const response = await testServer.post('/comment/addComment').send(mockReqBody);
 
     expect(response.status).toBe(400);
     expect(response.text).toBe('Invalid request');
@@ -147,7 +205,7 @@ describe('POST /addComment', () => {
       },
     };
 
-    const response = await supertest(app).post('/comment/addComment').send(mockReqBody);
+    const response = await testServer.post('/comment/addComment').send(mockReqBody);
 
     expect(response.status).toBe(400);
     expect(response.text).toBe('Invalid request');
@@ -165,7 +223,7 @@ describe('POST /addComment', () => {
       },
     };
 
-    const response = await supertest(app).post('/comment/addComment').send(mockReqBody);
+    const response = await testServer.post('/comment/addComment').send(mockReqBody);
 
     expect(response.status).toBe(400);
     expect(response.text).toBe('Invalid request');
@@ -182,7 +240,7 @@ describe('POST /addComment', () => {
       },
     };
 
-    const response = await supertest(app).post('/comment/addComment').send(mockReqBody);
+    const response = await testServer.post('/comment/addComment').send(mockReqBody);
 
     expect(response.status).toBe(400);
     expect(response.text).toBe('Invalid request');
@@ -200,7 +258,7 @@ describe('POST /addComment', () => {
       },
     };
 
-    const response = await supertest(app).post('/comment/addComment').send(mockReqBody);
+    const response = await testServer.post('/comment/addComment').send(mockReqBody);
 
     expect(response.status).toBe(400);
     expect(response.text).toBe('Invalid comment body');
@@ -216,7 +274,7 @@ describe('POST /addComment', () => {
       },
     };
 
-    const response = await supertest(app).post('/comment/addComment').send(mockReqBody);
+    const response = await testServer.post('/comment/addComment').send(mockReqBody);
 
     expect(response.status).toBe(400);
     expect(response.text).toBe('Invalid request');
@@ -232,14 +290,14 @@ describe('POST /addComment', () => {
       },
     };
 
-    const response = await supertest(app).post('/comment/addComment').send(mockReqBody);
+    const response = await testServer.post('/comment/addComment').send(mockReqBody);
 
     expect(response.status).toBe(400);
     expect(response.text).toBe('Invalid request');
   });
 
   it('should return bad request error if request body is missing', async () => {
-    const response = await supertest(app).post('/comment/addComment');
+    const response = await testServer.post('/comment/addComment');
 
     expect(response.status).toBe(400);
     expect(response.text).toBe('Invalid request');
@@ -256,7 +314,7 @@ describe('POST /addComment', () => {
       },
     };
 
-    const response = await supertest(app).post('/comment/addComment').send(mockReqBody);
+    const response = await testServer.post('/comment/addComment').send(mockReqBody);
 
     expect(response.status).toBe(400);
     expect(response.text).toBe('Invalid ID format');
@@ -276,7 +334,7 @@ describe('POST /addComment', () => {
 
     saveCommentSpy.mockResolvedValueOnce({ error: 'Error when saving a comment' });
 
-    const response = await supertest(app).post('/comment/addComment').send(mockReqBody);
+    const response = await testServer.post('/comment/addComment').send(mockReqBody);
 
     expect(response.status).toBe(500);
     expect(response.text).toBe('Error when adding comment: Error when saving a comment');
@@ -307,7 +365,7 @@ describe('POST /addComment', () => {
       error: 'Error when adding comment',
     });
 
-    const response = await supertest(app).post('/comment/addComment').send(mockReqBody);
+    const response = await testServer.post('/comment/addComment').send(mockReqBody);
 
     expect(response.status).toBe(500);
     expect(response.text).toBe('Error when adding comment: Error when adding comment');
@@ -351,7 +409,7 @@ describe('POST /addComment', () => {
     addCommentSpy.mockResolvedValueOnce(mockQuestion);
     popDocSpy.mockResolvedValueOnce({ error: 'Error when populating document' });
 
-    const response = await supertest(app).post('/comment/addComment').send(mockReqBody);
+    const response = await testServer.post('/comment/addComment').send(mockReqBody);
 
     expect(response.status).toBe(500);
     expect(response.text).toBe('Error when adding comment: Error when populating document');
