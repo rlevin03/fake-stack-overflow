@@ -59,6 +59,8 @@ const createUser = async (user: UserCredentials): Promise<SafeDatabaseUser> => {
  */
 const loginUser = async (user: UserCredentials): Promise<SafeDatabaseUser> => {
   try {
+    // eslint-disable-next-line no-console
+    console.log(`${USER_API_URL}`);
     const res = await api.post(`${USER_API_URL}/login`, user);
     return res.data;
   } catch (error) {
