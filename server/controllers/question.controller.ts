@@ -130,15 +130,14 @@ const questionController = (socket: FakeSOSocket) => {
    * Adds a new question to the database.
    */
   const addQuestion = async (req: AddQuestionRequest, res: Response): Promise<void> => {
-    if (!isQuestionBodyValid(req.body)) {
+    if (!req.body || !isQuestionBodyValid(req.body)) {
       res.status(400).send('Invalid question body');
       return;
     }
-
-    const question: Question = req.body;
-
+    // The payload now may include an optional generateAI flag.
+    const question: Question & { generateAI?: boolean } = req.body;
     try {
-      // Process tags
+      // Process tags.
       const questionsWithTags = {
         ...question,
         tags: await processTags(question.tags),
@@ -147,23 +146,22 @@ const questionController = (socket: FakeSOSocket) => {
         throw new Error('Invalid tags');
       }
 
-      // Save the question (and update user points/leaderboard)
+      // Save the question (this updates points, etc.).
       const result = await saveQuestion(questionsWithTags, socket);
       if ('error' in result) {
         throw new Error(result.error);
       }
 
-      // Populate the newly created question
+      // Populate the newly created question.
       const populatedQuestion = (await populateDocument(
         result._id.toString(),
         'question',
       )) as PopulatedDatabaseQuestion;
-
       if ('error' in populatedQuestion) {
         throw new Error(String(populatedQuestion.error));
       }
 
-      // Update user preferences (+1 for each tag)
+      // Update user preferences (+1 per tag).
       const voteImpact = 1;
       const updates = populatedQuestion.tags
         .map((tag: Tag) => {
@@ -172,57 +170,48 @@ const questionController = (socket: FakeSOSocket) => {
           return index !== undefined ? { index, value: voteImpact } : null;
         })
         .filter((update): update is { index: number; value: number } => update !== null);
-
       const userRecord = await UserModel.findOne({ username: populatedQuestion.askedBy });
       if (userRecord) {
         await updateUserPreferences(userRecord._id.toString(), updates);
       }
 
-      // Emit an event and send the question back in the response
+      // Emit event and send response.
       socket.emit('questionUpdate', populatedQuestion);
       res.json(populatedQuestion);
 
-      // ----- If the user's AI toggle is on, generate an AI answer asynchronously -----
-      if (userRecord && userRecord.aiToggler) {
-        // 1) Extract question details
+      // ----- AI Answer Generation -----
+      // Now, generate an AI answer only if the incoming payload's generateAI flag is true.
+      if (question.generateAI === true) {
         const questionTitle = populatedQuestion.title;
         const questionDescription = populatedQuestion.text;
         const tagNames = populatedQuestion.tags.map(tg => tg.name);
-
-        // 2) Call Gemini with title, description, and tag list
         getGeminiResponse(questionTitle, questionDescription, tagNames)
           .then(async (geminiText: string) => {
             try {
-              // 3) Prepend an italicized label
-              const aiAnswerText = `${geminiText}`;
-
-              // 4) Build the new AI answer object (with all required fields)
+              const aiAnswerText = geminiText;
               const aiAnswer = {
                 text: aiAnswerText,
                 ansBy: 'AI',
                 ansDateTime: new Date(),
                 upVotes: [] as string[],
                 downVotes: [] as string[],
-                // Possibly typed as Comment[] or any[] if needed
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 comments: [] as any[],
               };
-
-              // 5) Save the AI-generated answer
               const savedAiAnswer = await saveAnswer(aiAnswer);
               if (!('error' in savedAiAnswer)) {
-                // 6) Attach the AI answer to the question
                 await addAnswerToQuestion(populatedQuestion._id.toString(), savedAiAnswer);
-
-                // 7) Emit an event for the AI answer
+                // Emit an event for the new AI-generated answer.
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 (socket as any).emit('aiAnswerUpdate', savedAiAnswer);
               }
             } catch (error) {
-              /* empty */
+              console.error('Error saving AI-generated answer:', error);
             }
           })
-          .catch((error: unknown) => {});
+          .catch((error: unknown) => {
+            console.error('Error generating AI answer:', error);
+          });
       }
     } catch (err: unknown) {
       if (err instanceof Error) {
