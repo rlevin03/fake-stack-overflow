@@ -98,7 +98,17 @@ export const addVersionToSession = async (
 
     session.versions.push(version);
     session.updatedAt = new Date();
-    await session.save();
+
+    try {
+      await session.save(); // this can fail independently
+    } catch (saveError: unknown) {
+      return {
+        error: `Error saving session: ${
+          saveError instanceof Error ? saveError.message : String(saveError)
+        }`,
+      };
+    }
+
     return session.toObject();
   } catch (error: unknown) {
     return {

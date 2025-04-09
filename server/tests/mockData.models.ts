@@ -192,22 +192,32 @@ export const POPULATED_QUESTIONS: PopulatedDatabaseQuestion[] = [
   },
 ];
 
+// Fix the user mocks to satisfy the User interface.
 export const user: User = {
   username: 'user1',
   password: 'password',
   dateJoined: new Date('2024-12-03'),
-  badges: [],
-  preferences: [],
+  badges: [], // Array of ObjectId
+  biography: '', // Optionally empty string (or undefined)
+  preferences: [], // Array of numbers (or preset numbers)
   aiToggler: false,
   pointsHistory: [],
   hideRanking: false,
-  lastActive: new Date(),
+  lastActive: new Date('2024-12-03'),
 };
 
+// Fix safeUser as an Omit of password from DatabaseUser
 export const safeUser: SafeDatabaseUser = {
   _id: new ObjectId(),
   username: 'user1',
   dateJoined: new Date('2024-12-03'),
+  badges: [],
+  biography: '',
+  preferences: [],
+  aiToggler: false,
+  pointsHistory: [],
+  hideRanking: false,
+  lastActive: new Date('2024-12-03'),
   points: 0,
   pointsHistory: [],
   hideRanking: false,

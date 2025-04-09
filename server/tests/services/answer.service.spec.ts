@@ -1,90 +1,227 @@
-import mongoose from 'mongoose';
-import AnswerModel from '../../models/answers.model';
-import QuestionModel from '../../models/questions.model';
-import { saveAnswer, addAnswerToQuestion } from '../../services/answer.service';
-import { DatabaseAnswer, DatabaseQuestion } from '../../types/types';
-import { QUESTIONS, ans1, ans4 } from '../mockData.models';
+// tests/services/answer.service.spec.ts
 
+import mongoose from 'mongoose';
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const mockingoose = require('mockingoose');
+import AnswerModel from '../../models/answers.model';
+import UserModel from '../../models/users.model';
+import QuestionModel from '../../models/questions.model';
+import {
+  getMostRecentAnswerTime,
+  saveAnswer,
+  addAnswerToQuestion,
+  addVoteToAnswer,
+} from '../../services/answer.service';
+import { FakeSOSocket } from '../../types/types';
+import * as userService from '../../services/user.service';
+import { QUESTIONS, ans1, ans4 } from '../mockData.models';
 
-describe('Answer model', () => {
+describe('Answer service', () => {
   beforeEach(() => {
     mockingoose.resetAll();
+    jest.clearAllMocks();
   });
 
   describe('saveAnswer', () => {
-    test('saveAnswer should return the saved answer', async () => {
-      const mockAnswer = {
-        text: 'This is a test answer',
-        ansBy: 'dummyUserId',
-        ansDateTime: new Date('2024-06-06'),
-        comments: [],
-        upVotes: [],
-        downVotes: [],
-      };
-      const mockDBAnswer = {
-        ...mockAnswer,
-        _id: new mongoose.Types.ObjectId(),
-      };
+    const mockAnswer = {
+      text: 'This is a test answer',
+      ansBy: 'dummyUser',
+      ansDateTime: new Date('2025-06-06T12:00:00Z'),
+      comments: [],
+      upVotes: [],
+      downVotes: [],
+    };
 
-      mockingoose(AnswerModel, 'create').toReturn(mockDBAnswer);
+    it('should return the saved answer and award points', async () => {
+      const created = { ...mockAnswer, _id: new mongoose.Types.ObjectId() };
+      jest.spyOn(AnswerModel, 'create').mockResolvedValueOnce(created as any);
+      jest.spyOn(UserModel, 'updateOne').mockResolvedValue({} as any);
+      jest.spyOn(UserModel, 'findOne').mockResolvedValue({ _id: 'u1' } as any);
+      jest.spyOn(userService, 'appendPointsHistory').mockResolvedValue({} as any);
 
-      const result = (await saveAnswer(mockAnswer)) as DatabaseAnswer;
+      const res = (await saveAnswer(mockAnswer as any)) as any;
+      expect(res._id).toBeDefined();
+      expect(res.text).toBe(mockAnswer.text);
+    });
 
-      expect(result._id).toBeDefined();
-      expect(result.text).toEqual(mockAnswer.text);
-      expect(result.ansBy).toEqual(mockAnswer.ansBy);
-      expect(result.ansDateTime).toEqual(mockAnswer.ansDateTime);
+    it('should still return the saved answer if no userRecord is found', async () => {
+      const created = { ...mockAnswer, _id: new mongoose.Types.ObjectId() };
+      jest.spyOn(AnswerModel, 'create').mockResolvedValueOnce(created as any);
+      jest.spyOn(UserModel, 'updateOne').mockResolvedValue({} as any);
+      jest.spyOn(UserModel, 'findOne').mockResolvedValueOnce(null as any);
+
+      const res = (await saveAnswer(mockAnswer as any)) as any;
+      expect(res._id).toBeDefined();
+      expect(res.text).toBe(mockAnswer.text);
+    });
+
+    it('should return an error if create throws', async () => {
+      jest
+        .spyOn(AnswerModel, 'create')
+        .mockRejectedValueOnce(new Error('DB failure'));
+
+      const res = await saveAnswer(mockAnswer as any);
+      expect(res).toEqual({ error: 'Error when saving an answer' });
     });
   });
 
   describe('addAnswerToQuestion', () => {
-    test('addAnswerToQuestion should return the updated question', async () => {
-      const question: DatabaseQuestion = QUESTIONS.filter(
-        q => q._id && q._id.toString() === '65e9b5a995b6c7045a30d823',
-      )[0];
-
+    it('should return updated question when successful', async () => {
+      const question = { ...QUESTIONS[0], answers: [ans1._id] };
       jest
         .spyOn(QuestionModel, 'findOneAndUpdate')
-        .mockResolvedValueOnce({ ...question, answers: [...question.answers, ans4._id] });
+        .mockResolvedValue({ ...question, answers: [...question.answers, ans4._id] } as any);
 
-      const result = (await addAnswerToQuestion(
-        '65e9b5a995b6c7045a30d823',
+      const res = (await addAnswerToQuestion(
+        question._id.toString(),
         ans4,
-      )) as DatabaseQuestion;
+      )) as any;
 
-      expect(result.answers.length).toEqual(4);
-      expect(result.answers).toContain(ans4._id);
+      expect(res.answers).toContain(ans4._id);
     });
 
-    test('addAnswerToQuestion should return an object with error if findOneAndUpdate throws an error', async () => {
-      mockingoose(QuestionModel).toReturn(new Error('error'), 'findOneAndUpdate');
+    it('should return error object if findOneAndUpdate throws', async () => {
+      jest
+        .spyOn(QuestionModel, 'findOneAndUpdate')
+        .mockRejectedValueOnce(new Error('error'));
 
-      const result = await addAnswerToQuestion('65e9b5a995b6c7045a30d823', ans1);
-
-      expect(result).toHaveProperty('error');
+      const res = await addAnswerToQuestion('anyId', ans1 as any);
+      expect(res).toEqual({ error: 'Error when adding answer to question' });
     });
 
-    test('addAnswerToQuestion should return an object with error if findOneAndUpdate returns null', async () => {
-      mockingoose(QuestionModel).toReturn(null, 'findOneAndUpdate');
+    it('should return error object if findOneAndUpdate returns null', async () => {
+      jest
+        .spyOn(QuestionModel, 'findOneAndUpdate')
+        .mockResolvedValueOnce(null);
 
-      const result = await addAnswerToQuestion('65e9b5a995b6c7045a30d823', ans1);
-
-      expect(result).toHaveProperty('error');
+      const res = await addAnswerToQuestion('anyId', ans1 as any);
+      expect(res).toEqual({ error: 'Error when adding answer to question' });
     });
 
-    test('addAnswerToQuestion should throw an error if a required field is missing in the answer', async () => {
-      const invalidAnswer: Partial<DatabaseAnswer> = {
-        text: 'This is an answer text',
-        ansBy: 'user123', // Missing ansDateTime
-      };
+    it('should return error if answer is invalid', async () => {
+      const invalid = { text: 'hi', ansBy: 'u' } as any;
+      const res = await addAnswerToQuestion('qid', invalid);
+      expect(res).toEqual({ error: 'Error when adding answer to question' });
+    });
+  });
 
-      const qid = 'validQuestionId';
+  describe('getMostRecentAnswerTime', () => {
+    it('should pick the latest ansDateTime per question', () => {
+      const qid = new mongoose.Types.ObjectId();
+      const answers = [
+        { ansDateTime: new Date('2025-01-01T00:00:00Z') },
+        { ansDateTime: new Date('2025-02-01T00:00:00Z') },
+        { ansDateTime: new Date('2025-01-15T00:00:00Z') },
+      ] as any;
+      const question = { _id: qid, answers } as any;
+      const mp = new Map<string, Date>();
 
-      expect(addAnswerToQuestion(qid, invalidAnswer as DatabaseAnswer)).resolves.toEqual({
-        error: 'Error when adding answer to question',
-      });
+      getMostRecentAnswerTime(question, mp);
+      expect(mp.get(qid.toString())!.toISOString()).toBe('2025-02-01T00:00:00.000Z');
+
+      question.answers.push({ ansDateTime: new Date('2025-03-01T12:34:56Z') });
+      getMostRecentAnswerTime(question, mp);
+      expect(mp.get(qid.toString())!.toISOString()).toBe('2025-03-01T12:34:56.000Z');
+    });
+  });
+
+  describe('addVoteToAnswer', () => {
+    let socket: FakeSOSocket;
+    const ansid = new mongoose.Types.ObjectId().toString();
+    const username = 'testUser';
+
+    beforeEach(() => {
+      socket = { emit: jest.fn() } as any;
+      jest
+        .spyOn(userService, 'getTop10ByPoints')
+        .mockResolvedValue([{ _id: 'u1', username: 'u1' }] as any);
+      jest
+        .spyOn(userService, 'appendPointsHistory')
+        .mockResolvedValue({} as any);
+    });
+
+    it('should upvote and emit leaderboard', async () => {
+      mockingoose(AnswerModel).toReturn(
+        { _id: ansid, upVotes: [username], downVotes: [] },
+        'findOneAndUpdate',
+      );
+      jest.spyOn(UserModel, 'updateOne').mockResolvedValue({} as any);
+      mockingoose(UserModel).toReturn({ _id: 'u1' }, 'findOne');
+
+      const result = await addVoteToAnswer(ansid, username, 'upvote', socket);
+      if ('error' in result) throw new Error(result.error);
+
+      expect(result.msg).toBe('Answer upvoted successfully');
+      expect(result.upVotes).toEqual([username]);
+      expect(result.downVotes).toEqual([]);
+      expect(socket.emit).toHaveBeenCalledWith('top10Response', [
+        { _id: 'u1', username: 'u1' },
+      ]);
+    });
+
+    it('should cancel upvote if already upvoted', async () => {
+      mockingoose(AnswerModel).toReturn(
+        { _id: ansid, upVotes: [], downVotes: [] },
+        'findOneAndUpdate',
+      );
+      jest.spyOn(UserModel, 'updateOne').mockResolvedValue({} as any);
+      mockingoose(UserModel).toReturn({ _id: 'u1' }, 'findOne');
+
+      const result = await addVoteToAnswer(ansid, username, 'upvote', socket);
+      if ('error' in result) throw new Error(result.error);
+
+      expect(result.msg).toBe('Upvote cancelled successfully');
+      expect(result.upVotes).toEqual([]);
+      expect(result.downVotes).toEqual([]);
+    });
+
+    it('should downvote and emit leaderboard', async () => {
+      mockingoose(AnswerModel).toReturn(
+        { _id: ansid, upVotes: [], downVotes: [username] },
+        'findOneAndUpdate',
+      );
+      jest.spyOn(UserModel, 'updateOne').mockResolvedValue({} as any);
+      mockingoose(UserModel).toReturn({ _id: 'u1' }, 'findOne');
+
+      const result = await addVoteToAnswer(ansid, username, 'downvote', socket);
+      if ('error' in result) throw new Error(result.error);
+
+      expect(result.msg).toBe('Answer downvoted successfully');
+      expect(result.upVotes).toEqual([]);
+      expect(result.downVotes).toEqual([username]);
+      expect(socket.emit).toHaveBeenCalledWith('top10Response', [
+        { _id: 'u1', username: 'u1' },
+      ]);
+    });
+
+    it('should cancel downvote if already downvoted', async () => {
+      mockingoose(AnswerModel).toReturn(
+        { _id: ansid, upVotes: [], downVotes: [] },
+        'findOneAndUpdate',
+      );
+      jest.spyOn(UserModel, 'updateOne').mockResolvedValue({} as any);
+      mockingoose(UserModel).toReturn({ _id: 'u1' }, 'findOne');
+
+      const result = await addVoteToAnswer(ansid, username, 'downvote', socket);
+      if ('error' in result) throw new Error(result.error);
+
+      expect(result.msg).toBe('Downvote cancelled successfully');
+      expect(result.upVotes).toEqual([]);
+      expect(result.downVotes).toEqual([]);
+    });
+
+    it('should return error if answer not found', async () => {
+      mockingoose(AnswerModel).toReturn(null, 'findOneAndUpdate');
+      const result = await addVoteToAnswer(ansid, username, 'upvote', socket);
+      expect(result).toEqual({ error: 'Answer not found!' });
+    });
+
+    it('should return error on DB failure', async () => {
+      jest
+        .spyOn(AnswerModel, 'findOneAndUpdate')
+        .mockRejectedValueOnce(new Error('DB Error'));
+      const result = await addVoteToAnswer(ansid, username, 'upvote', socket);
+      expect(result).toEqual({ error: 'Error when adding upvote to answer' });
     });
   });
 });

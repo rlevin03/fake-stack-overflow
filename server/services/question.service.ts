@@ -172,12 +172,12 @@ export const fetchAndIncrementQuestionViewsById = async (
  * and emits updated leaderboard and user rank via Socket.IO.
  *
  * @param {Question} question - The question to save
- * @param {FakeSOSocket} socket - The socket instance for broadcasting updates
+ * @param {FakeSOSocket} [socket] - The optional socket instance for broadcasting updates
  * @returns {Promise<QuestionResponse>} - The saved question or error message
  */
 export const saveQuestion = async (
   question: Question,
-  socket: FakeSOSocket,
+  socket?: FakeSOSocket, // Made optional
 ): Promise<QuestionResponse> => {
   try {
     // 1) Create the question
@@ -195,19 +195,19 @@ export const saveQuestion = async (
       await appendPointsHistory(userRecord._id.toString(), historyEntry);
     }
 
-    // 3) Fetch the updated top 10
+    // 3) Fetch the updated top 10 and emit it if socket is provided
     const top10 = await getTop10ByPoints();
-    if (Array.isArray(top10)) {
+    if (Array.isArray(top10) && socket) {
       socket.emit('top10Response', top10);
-    } else {
+    } else if (socket) {
       // Optionally: socket.emit('error', top10.error);
     }
 
-    // 4) Fetch updated user rank
+    // 4) Fetch updated user rank and emit it if socket is provided
     const rankResult = await getRankForUser(question.askedBy);
-    if (!('error' in rankResult)) {
+    if (!('error' in rankResult) && socket) {
       socket.emit('userRankResponse', { rank: rankResult.rank });
-    } else {
+    } else if (socket) {
       // Optionally: socket.emit('error', rankResult.error);
     }
 
@@ -224,14 +224,14 @@ export const saveQuestion = async (
  * @param {string} qid - The question ID
  * @param {string} username - The username who voted
  * @param {'upvote' | 'downvote'} voteType - The vote type
- * @param {FakeSOSocket} socket - The socket instance for broadcasting
+ * @param {FakeSOSocket} [socket] - The optional socket instance for broadcasting
  * @returns {Promise<QuestionVoteResponse>} - The updated vote result
  */
 export const addVoteToQuestion = async (
   qid: string,
   username: string,
   voteType: 'upvote' | 'downvote',
-  socket: FakeSOSocket,
+  socket?: FakeSOSocket, // Made optional
 ): Promise<QuestionVoteResponse> => {
   let updateOperation: QueryOptions;
 
@@ -280,7 +280,7 @@ export const addVoteToQuestion = async (
   }
 
   try {
-    // 1) Update the question's upVotes/downVotes
+    // 1) Update the question's votes
     const result: DatabaseQuestion | null = await QuestionModel.findOneAndUpdate(
       { _id: qid },
       updateOperation,
@@ -291,7 +291,7 @@ export const addVoteToQuestion = async (
       return { error: 'Question not found!' };
     }
 
-    // 2) Increment user points by 1
+    // 2) Increment user points by 1 and update the user's vote records
     await UserModel.updateOne(
       { username },
       {
@@ -307,15 +307,15 @@ export const addVoteToQuestion = async (
       await appendPointsHistory(voterUser._id.toString(), historyEntry);
     }
 
-    // 3) Fetch the updated top 10
+    // 3) Fetch the updated top 10 and emit it if socket is provided
     const top10 = await getTop10ByPoints();
-    if (Array.isArray(top10)) {
+    if (Array.isArray(top10) && socket) {
       socket.emit('top10Response', top10);
-    } else {
-      // Optionally: socket.emit('error', top10.error);
+    } else if (socket) {
+      socket.emit('error', top10);
     }
 
-    // 4) Build response message
+    // 4) Build response message based on current vote arrays
     let msg = '';
     if (voteType === 'upvote') {
       msg = result.upVotes.includes(username)
