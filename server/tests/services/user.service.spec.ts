@@ -1,12 +1,9 @@
 import mongoose from 'mongoose';
 import UserModel from '../../models/users.model';
 import QuestionModel from '../../models/questions.model';
-import QuestionModel from '../../models/questions.model';
 import {
   deleteUserByUsername,
   getUserByUsername,
-  getUsersList,
-  loginUser,
   saveUser,
   updateUser,
   getTop10ByPoints,
@@ -17,8 +14,14 @@ import {
   getPointsHistory,
   decayInactiveUserPoints,
 } from '../../services/user.service';
-import { SafeDatabaseUser } from '../../types/types';
+import { SafeDatabaseUser, User } from '../../types/types';
 import { user, safeUser } from '../mockData.models';
+
+// For preferences update testing
+interface PreferenceUpdate {
+  index: number;
+  value: number;
+}
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const mockingoose = require('mockingoose');
@@ -54,11 +57,11 @@ describe('User Service - Extended Coverage', () => {
   });
 
   it('should update preferences successfully', async () => {
-    const updatedPreferencesUser: any = {
+    const updatedPreferencesUser = {
       _id: safeUser._id,
       preferences: [...safeUser.preferences], // start with existing prefs
       save: jest.fn().mockResolvedValue(undefined),
-      toObject(this: any) {
+      toObject() {
         // expose current (possibly mutated) preferences
         return { ...safeUser, preferences: this.preferences };
       },
@@ -66,7 +69,9 @@ describe('User Service - Extended Coverage', () => {
 
     mockingoose(UserModel).toReturn(updatedPreferencesUser, 'findOne');
 
-    const result = await updateUserPreferences(safeUser._id.toString(), [{ index: 0, value: 2 }]);
+    const result = await updateUserPreferences(safeUser._id.toString(), [
+      { index: 0, value: 2 },
+    ] as PreferenceUpdate[]);
 
     expect((result as SafeDatabaseUser).preferences[0]).toBe(2);
   });
@@ -499,7 +504,7 @@ describe('decayInactiveUserPoints', () => {
 
     const updateOneSpy = jest
       .spyOn(UserModel, 'updateOne')
-      .mockResolvedValue({ nModified: 1 } as any);
+      .mockResolvedValue({ nModified: 1 } as unknown as ReturnType<typeof UserModel.updateOne>);
 
     await decayInactiveUserPoints();
 
@@ -530,8 +535,10 @@ describe('decayInactiveUserPoints', () => {
     // Mock find to throw an error
     mockingoose(UserModel).toReturn(new Error('Database error'), 'find');
 
-    // This function should not throw any errors
-    await expect(decayInactiveUserPoints()).resolves.not.toThrow();
+    // This test passes if the function doesn't throw an error
+    // No assertions needed, we just need to make sure it completes without error
+    await decayInactiveUserPoints();
+    expect(true).toBe(true); // Just to make sure the test runs
   });
 
   it('should not update users who are active within the 60-day threshold', async () => {
@@ -589,7 +596,9 @@ describe('saveUser edge cases', () => {
 
   it('should throw an error when create returns null', async () => {
     // Explicitly return null from the create operation
-    jest.spyOn(UserModel, 'create').mockResolvedValueOnce(null as any);
+    jest
+      .spyOn(UserModel, 'create')
+      .mockResolvedValueOnce(null as unknown as ReturnType<typeof UserModel.create>);
 
     const result = await saveUser(user);
 

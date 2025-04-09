@@ -1,11 +1,12 @@
 import mongoose from 'mongoose';
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const mockingoose = require('mockingoose');
 
 import BadgeModel from '../../models/badge.model';
 import UserModel from '../../models/users.model';
 import { awardBadge, saveBadge, getBadgesByIds } from '../../services/badge.service';
 import { BadgeName, BadgeDescription } from '../../types/badgeConstants';
+import { DatabaseBadge } from '../../types/types';
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const mockingoose = require('mockingoose');
 
 describe('Badge Service', () => {
   const badgeId = new mongoose.Types.ObjectId();
@@ -23,29 +24,33 @@ describe('Badge Service', () => {
 
   describe('awardBadge', () => {
     it('should award an existing badge and update progress', async () => {
-        const badgeDoc = {
+      const badgeDoc = {
+        _id: badgeId,
+        name: BadgeName.HELPING_HAND,
+        description: BadgeDescription.HELPING_HAND,
+        progress: 5,
+        attained: false,
+        save: jest.fn().mockResolvedValue(undefined),
+        toObject: () => ({
           _id: badgeId,
           name: BadgeName.HELPING_HAND,
           description: BadgeDescription.HELPING_HAND,
-          progress: 5,
-          attained: false,
-          save: jest.fn().mockResolvedValue(undefined),
-          toObject: () => ({
-            _id: badgeId,
-            name: BadgeName.HELPING_HAND,
-            description: BadgeDescription.HELPING_HAND,
-            progress: 6, // <-- incremented
-            attained: true,
-          }),
-        };
-      
-        mockingoose(UserModel).toReturn(userDoc, 'findOne');
-        mockingoose(BadgeModel).toReturn(badgeDoc, 'findOne');
-      
-        const result = await awardBadge('john', BadgeName.HELPING_HAND, BadgeDescription.HELPING_HAND);
-        expect(result.attained).toBe(true);
-      });
-      
+          progress: 6, // <-- incremented
+          attained: true,
+        }),
+      };
+
+      mockingoose(UserModel).toReturn(userDoc, 'findOne');
+      mockingoose(BadgeModel).toReturn(badgeDoc, 'findOne');
+
+      const result = await awardBadge(
+        'john',
+        BadgeName.HELPING_HAND,
+        BadgeDescription.HELPING_HAND,
+      );
+      expect(result.attained).toBe(true);
+    });
+
     it('should set attained to true for RESPECTED_VOICE when progress meets threshold', async () => {
       const badgeDoc = {
         _id: badgeId,
@@ -66,7 +71,11 @@ describe('Badge Service', () => {
       mockingoose(UserModel).toReturn(userDoc, 'findOne');
       mockingoose(BadgeModel).toReturn(badgeDoc, 'findOne');
 
-      const result = await awardBadge('john', BadgeName.RESPECTED_VOICE, BadgeDescription.RESPECTED_VOICE);
+      const result = await awardBadge(
+        'john',
+        BadgeName.RESPECTED_VOICE,
+        BadgeDescription.RESPECTED_VOICE,
+      );
       expect(result.attained).toBe(true);
     });
 
@@ -90,36 +99,41 @@ describe('Badge Service', () => {
       mockingoose(UserModel).toReturn(userDoc, 'findOne');
       mockingoose(BadgeModel).toReturn(badgeDoc, 'findOne');
 
-      const result = await awardBadge('john', BadgeName.THE_HISTORIAN, BadgeDescription.THE_HISTORIAN);
+      const result = await awardBadge(
+        'john',
+        BadgeName.THE_HISTORIAN,
+        BadgeDescription.THE_HISTORIAN,
+      );
       expect(result.attained).toBe(true);
     });
 
     it('should create a badge and attach it to the user if badge not found', async () => {
-        mockingoose(UserModel).toReturn(userDoc, 'findOne');
-        mockingoose(BadgeModel).toReturn(null, 'findOne');
-      
-        const createdBadge = {
+      mockingoose(UserModel).toReturn(userDoc, 'findOne');
+      mockingoose(BadgeModel).toReturn(null, 'findOne');
+
+      const createdBadge = {
+        _id: badgeId,
+        name: BadgeName.CURIOUS_CAT,
+        description: BadgeDescription.CURIOUS_CAT,
+        progress: 0,
+        attained: false,
+        save: jest.fn().mockResolvedValue(undefined),
+        toObject: () => ({
           _id: badgeId,
           name: BadgeName.CURIOUS_CAT,
           description: BadgeDescription.CURIOUS_CAT,
-          progress: 0,
+          progress: 1, // <-- incremented from 0
           attained: false,
-          save: jest.fn().mockResolvedValue(undefined),
-          toObject: () => ({
-            _id: badgeId,
-            name: BadgeName.CURIOUS_CAT,
-            description: BadgeDescription.CURIOUS_CAT,
-            progress: 1, // <-- incremented from 0
-            attained: false,
-          }),
-        };
-      
-        jest.spyOn(BadgeModel, 'create').mockResolvedValueOnce(createdBadge as any);
-      
-        const result = await awardBadge('john', BadgeName.CURIOUS_CAT, BadgeDescription.CURIOUS_CAT);
-        expect(result.progress).toBe(1);
-      });
-      
+        }),
+      };
+
+      jest
+        .spyOn(BadgeModel, 'create')
+        .mockResolvedValueOnce(createdBadge as unknown as ReturnType<typeof BadgeModel.create>);
+
+      const result = await awardBadge('john', BadgeName.CURIOUS_CAT, BadgeDescription.CURIOUS_CAT);
+      expect(result.progress).toBe(1);
+    });
 
     it('should throw an error if user not found', async () => {
       mockingoose(UserModel).toReturn(null, 'findOne');
@@ -148,9 +162,15 @@ describe('Badge Service', () => {
       };
 
       mockingoose(UserModel).toReturn(userDoc, 'findOne');
-      jest.spyOn(BadgeModel, 'create').mockResolvedValueOnce(newBadge as any);
+      jest
+        .spyOn(BadgeModel, 'create')
+        .mockResolvedValueOnce(newBadge as unknown as ReturnType<typeof BadgeModel.create>);
 
-      const result = await saveBadge('john', BadgeName.PAIR_PROGRAMMER, BadgeDescription.PAIR_PROGRAMMER);
+      const result = await saveBadge(
+        'john',
+        BadgeName.PAIR_PROGRAMMER,
+        BadgeDescription.PAIR_PROGRAMMER,
+      );
       expect(result.name).toBe(BadgeName.PAIR_PROGRAMMER);
     });
 
@@ -182,7 +202,7 @@ describe('Badge Service', () => {
 
       const result = await getBadgesByIds([badgeId.toString()]);
       expect(result.length).toBe(1);
-      expect((result[0] as any)._id.toString()).toBe(badgeId.toString());
+      expect((result[0] as DatabaseBadge)._id.toString()).toBe(badgeId.toString());
     });
 
     it('should throw error if badge lookup fails', async () => {

@@ -1,6 +1,4 @@
 import mongoose from 'mongoose';
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const mockingoose = require('mockingoose');
 
 import SessionModel from '../../models/sessions.model';
 import UserModel from '../../models/users.model';
@@ -10,6 +8,9 @@ import {
   getUserSessions,
   addVersionToSession,
 } from '../../services/session.service';
+import { DatabaseSession } from '../../types/types';
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const mockingoose = require('mockingoose');
 
 describe('Session Service', () => {
   beforeEach(() => {
@@ -28,7 +29,9 @@ describe('Session Service', () => {
       };
 
       mockingoose(UserModel).toReturn(user, 'findOne');
-      jest.spyOn(SessionModel, 'create').mockResolvedValueOnce(createdSession as any);
+      jest
+        .spyOn(SessionModel, 'create')
+        .mockResolvedValueOnce(createdSession as unknown as ReturnType<typeof SessionModel.create>);
 
       const result = await createSession('john');
       expect(result).toMatchObject({ createdBy: user._id });
@@ -117,7 +120,7 @@ describe('Session Service', () => {
 
       const result = await addVersionToSession(sessionId.toString(), 'v1');
       expect('error' in result).toBe(false);
-      expect((result as any).versions).toContain('v1');
+      expect((result as DatabaseSession).versions).toContain('v1');
     });
 
     it('should return error if session not found', async () => {

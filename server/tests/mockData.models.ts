@@ -219,10 +219,4 @@ export const safeUser: SafeDatabaseUser = {
   hideRanking: false,
   lastActive: new Date('2024-12-03'),
   points: 0,
-  pointsHistory: [],
-  hideRanking: false,
-  lastActive: new Date(),
-  badges: [],
-  preferences: [],
-  aiToggler: false,
 };
