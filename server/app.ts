@@ -30,8 +30,12 @@ const port = parseInt(process.env.PORT || '8000');
 const app = express();
 const server = http.createServer(app);
 const socket: FakeSOSocket = new Server(server, {
-  cors: { origin: '*' },
+  cors: {
+    origin: CLIENT_URL,
+    credentials: true,
+  },
 });
+
 
 // Call registerCollabHandlers to set up collaboration events
 registerCollabHandlers(socket);

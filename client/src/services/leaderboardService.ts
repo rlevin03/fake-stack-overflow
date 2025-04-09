@@ -9,7 +9,7 @@ export interface LeaderboardUser {
 
 // Create a single socket connection to the server.
 // Adjust the URL if needed.
-const socket: Socket = io('http://localhost:8000');
+const socket: Socket = io(process.env.REACT_APP_SERVER_URL || 'http://localhost:8000');
 
 // Helper function to get the top 10 leaderboard using websockets.
 export async function getTop10Leaderboard(): Promise<LeaderboardUser[]> {
