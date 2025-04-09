@@ -1,4 +1,3 @@
-// client/src/components/ProfileSettings/index.tsx
 import React from 'react';
 import './index.css';
 import useProfileSettings from '../../hooks/useProfileSettings';
@@ -28,8 +27,6 @@ const ProfileSettings: React.FC = () => {
     handleDeleteUser,
     aiToggler,
     handleToggleAIToggler,
-    hideRanking,
-    handleToggleRankingVisibility,
   } = useProfileSettings();
 
   return (
@@ -90,18 +87,7 @@ const ProfileSettings: React.FC = () => {
               <h4>AI Settings</h4>
               <label>
                 <input type='checkbox' checked={aiToggler} onChange={handleToggleAIToggler} />
-                Enable AI-Generated Answers
-              </label>
-            </div>
-            <div className='ranking-toggle-container' style={{ marginTop: '1rem' }}>
-              <h4>Public Ranking Settings</h4>
-              <label>
-                <input
-                  type='checkbox'
-                  checked={hideRanking}
-                  onChange={handleToggleRankingVisibility}
-                />
-                Hide my public ranking
+                Enable AI Features
               </label>
             </div>
             {canEditProfile && <InterestsCard />}

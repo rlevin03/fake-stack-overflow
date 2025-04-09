@@ -14,7 +14,8 @@ import useUserContext from './useUserContext';
 const useProfileSettings = () => {
   const { username } = useParams<{ username: string }>();
   const navigate = useNavigate();
-  const { user: currentUser, socket } = useUserContext();
+  // Destructure both user and setUser from the context.
+  const { user: currentUser, socket, setUser } = useUserContext();
 
   // Local state
   const [userData, setUserData] = useState<SafeDatabaseUser | null>(null);
@@ -108,6 +109,11 @@ const useProfileSettings = () => {
     }
   };
 
+  /**
+   * Handler for toggling the global AI setting.
+   * Now, after updating the user's AI setting, we also call setUser(updatedUser)
+   * so that all consumers (such as autocomplete hooks) immediately see the change.
+   */
   const handleToggleAIToggler = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const newValue = e.target.checked;
     setAiToggler(newValue);
@@ -115,6 +121,8 @@ const useProfileSettings = () => {
     try {
       const updatedUser = await updateAIToggler(username, newValue);
       setUserData(updatedUser);
+      // Also update the global user context.
+      setUser(updatedUser);
       setSuccessMessage('AI setting updated!');
       setErrorMessage(null);
     } catch (error) {
