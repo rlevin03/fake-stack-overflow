@@ -11,7 +11,7 @@ const MOCK_BADGES: DatabaseBadge[] = [
   {
     _id: new mongoose.Types.ObjectId(),
     name: 'Curious Cat',
-    description: 'Asked 10+ questions that received at least one upvote.',
+    description: 'Upvoted 10+ questions',
     progress: 10,
     attained: true,
   },

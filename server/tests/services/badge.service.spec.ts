@@ -82,15 +82,15 @@ describe('Badge Service', () => {
     it('should automatically attain badge for default case', async () => {
       const badgeDoc = {
         _id: badgeId,
-        name: BadgeName.THE_HISTORIAN,
-        description: BadgeDescription.THE_HISTORIAN,
+        name: BadgeName.PEOPLES_CHAMPION,
+        description: BadgeDescription.PEOPLES_CHAMPION,
         progress: 0,
         attained: false,
         save: jest.fn().mockResolvedValue(undefined),
         toObject: () => ({
           _id: badgeId,
-          name: BadgeName.THE_HISTORIAN,
-          description: BadgeDescription.THE_HISTORIAN,
+          name: BadgeName.PEOPLES_CHAMPION,
+          description: BadgeDescription.PEOPLES_CHAMPION,
           progress: 0,
           attained: true,
         }),
@@ -101,8 +101,8 @@ describe('Badge Service', () => {
 
       const result = await awardBadge(
         'john',
-        BadgeName.THE_HISTORIAN,
-        BadgeDescription.THE_HISTORIAN,
+        BadgeName.PEOPLES_CHAMPION,
+        BadgeDescription.PEOPLES_CHAMPION,
       );
       expect(result.attained).toBe(true);
     });
@@ -148,14 +148,14 @@ describe('Badge Service', () => {
     it('should create and attach a new badge to the user', async () => {
       const newBadge = {
         _id: badgeId,
-        name: BadgeName.PAIR_PROGRAMMER,
-        description: BadgeDescription.PAIR_PROGRAMMER,
+        name: BadgeName.CURIOUS_CAT,
+        description: BadgeDescription.CURIOUS_CAT,
         progress: 0,
         attained: false,
         toObject: () => ({
           _id: badgeId,
-          name: BadgeName.PAIR_PROGRAMMER,
-          description: BadgeDescription.PAIR_PROGRAMMER,
+          name: BadgeName.CURIOUS_CAT,
+          description: BadgeDescription.CURIOUS_CAT,
           progress: 0,
           attained: false,
         }),
@@ -166,19 +166,15 @@ describe('Badge Service', () => {
         .spyOn(BadgeModel, 'create')
         .mockResolvedValueOnce(newBadge as unknown as ReturnType<typeof BadgeModel.create>);
 
-      const result = await saveBadge(
-        'john',
-        BadgeName.PAIR_PROGRAMMER,
-        BadgeDescription.PAIR_PROGRAMMER,
-      );
-      expect(result.name).toBe(BadgeName.PAIR_PROGRAMMER);
+      const result = await saveBadge('john', BadgeName.CURIOUS_CAT, BadgeDescription.CURIOUS_CAT);
+      expect(result.name).toBe(BadgeName.CURIOUS_CAT);
     });
 
     it('should throw an error if user not found', async () => {
       mockingoose(UserModel).toReturn(null, 'findOne');
 
       await expect(
-        saveBadge('invalid_user', BadgeName.PAIR_PROGRAMMER, BadgeDescription.PAIR_PROGRAMMER),
+        saveBadge('invalid_user', BadgeName.CURIOUS_CAT, BadgeDescription.CURIOUS_CAT),
       ).rejects.toThrow('User not found');
     });
 
