@@ -1,13 +1,13 @@
 import React from 'react';
 import useNewQuestion from '../../../hooks/useNewQuestion';
-import useProfileSettings from '../../../hooks/useProfileSettings'; // reuse AI toggle from profile settings
+import useProfileSettings from '../../../hooks/useProfileSettings'; // to read the global AI toggle for autocomplete
 import Form from '../baseComponents/form';
 import AutocompleteInput from '../baseComponents/autocompleteInput';
 import AutocompleteTextArea from '../baseComponents/autocompleteTextArea';
 import TagSelector from '../../common/TagSelector';
 import './index.css';
 
-const NewQuestionPage = () => {
+const NewQuestionPage: React.FC = () => {
   const {
     title,
     setTitle,
@@ -23,9 +23,12 @@ const NewQuestionPage = () => {
     textSuggestion,
     handleTitleKeyDown,
     handleTextKeyDown,
+    generateAIAnswer,
+    setGenerateAIAnswer,
   } = useNewQuestion();
 
-  const { aiToggler, handleToggleAIToggler } = useProfileSettings();
+  // Global AI toggle from profile settings affects autocomplete only.
+  const { aiToggler } = useProfileSettings();
 
   return (
     <Form>
@@ -55,10 +58,16 @@ const NewQuestionPage = () => {
         {tagErr && <div className='error'>{tagErr}</div>}
       </div>
 
-      {/* Use the same AI toggle from profile settings */}
+      {/* Local "Generate AI Answer" checkbox.
+          It is enabled regardless of the global AI setting.
+          (The global toggle only affects autocomplete suggestions.) */}
       <div className='ai-toggle-container' style={{ marginTop: '1rem' }}>
         <label>
-          <input type='checkbox' checked={aiToggler} onChange={handleToggleAIToggler} />
+          <input
+            type='checkbox'
+            checked={generateAIAnswer}
+            onChange={e => setGenerateAIAnswer(e.target.checked)}
+          />
           Generate AI Answer
         </label>
       </div>

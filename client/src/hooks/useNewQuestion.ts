@@ -1,3 +1,4 @@
+// client/src/hooks/useNewQuestion.ts
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import io, { Socket } from 'socket.io-client';
@@ -6,32 +7,27 @@ import { addQuestion } from '../services/questionService';
 import useUserContext from './useUserContext';
 import { Question } from '../types/types';
 
-/**
- * Custom hook to handle question submission and form validation
- *
- * @returns title - The current value of the title input.
- * @returns text - The current value of the text input.
- * @returns tagNames - The current array of selected tag names.
- * @returns titleErr - Error message for the title field, if any.
- * @returns textErr - Error message for the text field, if any.
- * @returns tagErr - Error message for the tag field, if any.
- * @returns postQuestion - Function to validate the form and submit a new question.
- */
 const useNewQuestion = () => {
   const navigate = useNavigate();
   const { user } = useUserContext();
   const [title, setTitle] = useState<string>('');
   const [text, setText] = useState<string>('');
-  // Initialize tagNames as an array of strings
   const [tagNames, setTagNames] = useState<string[]>([]);
-
   const [titleErr, setTitleErr] = useState<string>('');
   const [textErr, setTextErr] = useState<string>('');
   const [tagErr, setTagErr] = useState<string>('');
 
-  // Autocomplete suggestion states for title and text
+  // Autocomplete suggestion states for title and text.
   const [titleSuggestion, setTitleSuggestion] = useState<string>('');
   const [textSuggestion, setTextSuggestion] = useState<string>('');
+
+  // Local checkbox state for "Generate AI Answer" on this page.
+  // (This is independent of the global AI toggle for autocomplete.)
+  const [generateAIAnswer, setGenerateAIAnswer] = useState<boolean>(false);
+
+  // Cooldown states for title and text suggestions.
+  const [titleCooldown, setTitleCooldown] = useState<boolean>(false);
+  const [textCooldown, setTextCooldown] = useState<boolean>(false);
 
   const socketRef = useRef<Socket | null>(null);
   const titleDebounce = useRef<NodeJS.Timeout | null>(null);
@@ -53,7 +49,15 @@ const useNewQuestion = () => {
     };
   }, []);
 
-  // Debounce for title field
+  // Clear suggestions immediately if global AI toggle is disabled.
+  useEffect(() => {
+    if (!user.aiToggler) {
+      setTitleSuggestion('');
+      setTextSuggestion('');
+    }
+  }, [user.aiToggler]);
+
+  // Debounce for title field: only emit if global AI toggle is enabled and not in cooldown.
   useEffect(() => {
     if (titleDebounce.current) clearTimeout(titleDebounce.current);
     if (title.trim() === '') {
@@ -61,15 +65,17 @@ const useNewQuestion = () => {
       return;
     }
     titleDebounce.current = setTimeout(() => {
-      socketRef.current?.emit('aiAutoComplete', { field: 'title', text: title });
+      if (user.aiToggler && !titleCooldown) {
+        socketRef.current?.emit('aiAutoComplete', { field: 'title', text: title });
+      }
     }, 4000);
     // eslint-disable-next-line consistent-return
     return () => {
       if (titleDebounce.current) clearTimeout(titleDebounce.current);
     };
-  }, [title]);
+  }, [title, user.aiToggler, titleCooldown]);
 
-  // Debounce for text field
+  // Debounce for text field: only emit if global AI toggle is enabled and not in cooldown.
   useEffect(() => {
     if (textDebounce.current) clearTimeout(textDebounce.current);
     if (text.trim() === '') {
@@ -77,40 +83,42 @@ const useNewQuestion = () => {
       return;
     }
     textDebounce.current = setTimeout(() => {
-      socketRef.current?.emit('aiAutoComplete', { field: 'text', text });
+      if (user.aiToggler && !textCooldown) {
+        socketRef.current?.emit('aiAutoComplete', { field: 'text', text });
+      }
     }, 4000);
     // eslint-disable-next-line consistent-return
     return () => {
       if (textDebounce.current) clearTimeout(textDebounce.current);
     };
-  }, [text]);
+  }, [text, user.aiToggler, textCooldown]);
 
-  // KeyDown for title: if Tab is pressed, accept suggestion
+  // KeyDown for title: if Tab is pressed and a suggestion exists, accept it and trigger cooldown.
   const handleTitleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>): void => {
     if (e.key === 'Tab' && titleSuggestion) {
       e.preventDefault();
       setTitle(prev => prev + titleSuggestion);
       setTitleSuggestion('');
+      setTitleCooldown(true);
+      setTimeout(() => setTitleCooldown(false), 3000);
+      if (titleDebounce.current) clearTimeout(titleDebounce.current);
     }
   };
 
-  // KeyDown for text: if Tab is pressed, accept suggestion
+  // KeyDown for text: if Tab is pressed and a suggestion exists, accept it and trigger cooldown.
   const handleTextKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>): void => {
     if (e.key === 'Tab' && textSuggestion) {
       e.preventDefault();
       setText(prev => prev + textSuggestion);
       setTextSuggestion('');
+      setTextCooldown(true);
+      setTimeout(() => setTextCooldown(false), 3000);
+      if (textDebounce.current) clearTimeout(textDebounce.current);
     }
   };
 
-  /**
-   * Validates the form before submitting the question.
-   *
-   * @returns boolean - True if the form is valid, false otherwise.
-   */
   const validateForm = (): boolean => {
     let isValid = true;
-
     if (!title) {
       setTitleErr('Title cannot be empty');
       isValid = false;
@@ -120,7 +128,6 @@ const useNewQuestion = () => {
     } else {
       setTitleErr('');
     }
-
     if (!text) {
       setTextErr('Question text cannot be empty');
       isValid = false;
@@ -130,7 +137,6 @@ const useNewQuestion = () => {
     } else {
       setTextErr('');
     }
-
     if (tagNames.length === 0) {
       setTagErr('Should have at least 1 tag');
       isValid = false;
@@ -140,23 +146,18 @@ const useNewQuestion = () => {
     } else {
       setTagErr('');
     }
-
     return isValid;
   };
 
-  /**
-   * Function to post a question to the server.
-   */
   const postQuestion = async () => {
     if (!validateForm()) return;
-
-    // Map the array of tag names to tag objects.
+    // Map tag names to tag objects.
     const tags = tagNames.map(tagName => ({
       name: tagName,
       description: 'user added tag',
     }));
-
-    const question: Question = {
+    // Create the question payload; include the local generateAIAnswer flag.
+    const question: Question & { generateAI?: boolean } = {
       title,
       text,
       tags,
@@ -167,10 +168,9 @@ const useNewQuestion = () => {
       downVotes: [],
       views: [],
       comments: [],
+      generateAI: generateAIAnswer,
     };
-
     const res = await addQuestion(question);
-
     if (res && res._id) {
       navigate('/home');
     }
@@ -191,6 +191,8 @@ const useNewQuestion = () => {
     textSuggestion,
     handleTitleKeyDown,
     handleTextKeyDown,
+    generateAIAnswer,
+    setGenerateAIAnswer,
   };
 };
 

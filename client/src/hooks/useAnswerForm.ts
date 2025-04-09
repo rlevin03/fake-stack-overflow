@@ -15,6 +15,7 @@ const useAnswerForm = () => {
   const [textErr, setTextErr] = useState<string>('');
   const [questionID, setQuestionID] = useState<string>('');
   const [aiSuggestion, setAiSuggestion] = useState<string>('');
+  const [cooldown, setCooldown] = useState<boolean>(false);
 
   const socketRef = useRef<Socket | null>(null);
   const debounceTimer = useRef<NodeJS.Timeout | null>(null);
@@ -28,11 +29,10 @@ const useAnswerForm = () => {
     setQuestionID(qid);
   }, [qid, navigate]);
 
-  // Setup socket connection for autocomplete suggestions
+  // Setup socket connection for autocomplete suggestions.
   useEffect(() => {
     socketRef.current = io(process.env.REACT_APP_SERVER_URL || 'http://localhost:8000');
     const socket = socketRef.current;
-    // Listen specifically for answer autocomplete suggestions
     socket.on('aiAutoCompleteResponseAnswer', (suggestion: string) => {
       setAiSuggestion(suggestion);
     });
@@ -42,24 +42,25 @@ const useAnswerForm = () => {
     };
   }, []);
 
-  // Only trigger autocomplete if user's AI toggler is enabled
-  const aiSuggestionsEnabled = user.aiToggler === true;
+  // Clear any suggestion immediately if the global AI toggle is disabled.
+  useEffect(() => {
+    if (!user.aiToggler) {
+      setAiSuggestion('');
+    }
+  }, [user.aiToggler]);
 
   // Debounce input: when text changes, wait 4 seconds before emitting an autocomplete request.
   useEffect(() => {
-    if (!aiSuggestionsEnabled) {
+    if (!user.aiToggler || cooldown) {
       setAiSuggestion('');
       return;
     }
-    if (debounceTimer.current) {
-      clearTimeout(debounceTimer.current);
-    }
+    if (debounceTimer.current) clearTimeout(debounceTimer.current);
     if (text.trim() === '') {
       setAiSuggestion('');
       return;
     }
     debounceTimer.current = setTimeout(() => {
-      // Emit an object with field 'answer' and the current text.
       socketRef.current?.emit('aiAutoComplete', { field: 'answer', text });
     }, 4000);
 
@@ -67,18 +68,21 @@ const useAnswerForm = () => {
     return () => {
       if (debounceTimer.current) clearTimeout(debounceTimer.current);
     };
-  }, [text, aiSuggestionsEnabled]);
+  }, [text, user.aiToggler, cooldown]);
 
-  // Handle keyDown events; if Tab is pressed and a suggestion exists, append it.
+  // Handle keyDown events: if Tab is pressed and a suggestion exists, accept it.
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>): void => {
     if (e.key === 'Tab' && aiSuggestion) {
       e.preventDefault();
       setText(prev => prev + aiSuggestion);
       setAiSuggestion('');
+      setCooldown(true);
+      setTimeout(() => setCooldown(false), 3000);
+      if (debounceTimer.current) clearTimeout(debounceTimer.current);
     }
   };
 
-  // Post answer function
+  // Post answer function.
   const postAnswer = async () => {
     let isValid = true;
     if (!text) {
