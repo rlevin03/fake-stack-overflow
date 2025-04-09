@@ -39,12 +39,7 @@ const ProtectedRoute = ({
   if (!user || !socket) {
     return <Navigate to='/' />;
   }
-  return (
-    <UserContext.Provider value={{ user, socket, setUser }}>
-      {children}
-      <BadgeNotificationHandler />
-    </UserContext.Provider>
-  );
+  return <UserContext.Provider value={{ user, socket, setUser }}>{children}</UserContext.Provider>;
 };
 
 const FakeStackOverflow = ({ socket }: { socket: FakeSOSocket | null }) => {
@@ -53,6 +48,11 @@ const FakeStackOverflow = ({ socket }: { socket: FakeSOSocket | null }) => {
   return (
     <LoginContext.Provider value={{ setUser }}>
       <ToastContainer />
+      {user && socket && (
+        <UserContext.Provider value={{ user, socket, setUser }}>
+          <BadgeNotificationHandler />
+        </UserContext.Provider>
+      )}
       <Routes>
         {/* Public Routes */}
         <Route path='/' element={<Login />} />
