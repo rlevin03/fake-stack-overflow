@@ -206,11 +206,11 @@ const questionController = (socket: FakeSOSocket) => {
                 (socket as any).emit('aiAnswerUpdate', savedAiAnswer);
               }
             } catch (error) {
-              console.error('Error saving AI-generated answer:', error);
+              throw new Error('Error when saving AI answer');
             }
           })
           .catch((error: unknown) => {
-            console.error('Error generating AI answer:', error);
+            throw new Error('Error when generating AI answer');
           });
       }
     } catch (err: unknown) {
