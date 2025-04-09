@@ -67,20 +67,22 @@ describe('Gemini Service', () => {
         },
       });
 
-      const result = await getGeminiAutoComplete('React is a JS library');
+      const result = await getGeminiAutoComplete('answer', 'React is a JS library');
       expect(result).toBe('...continued explanation.');
     });
 
     it('should return empty string if suggestion is missing', async () => {
       mockedAxios.post.mockResolvedValueOnce({ data: {} });
 
-      const result = await getGeminiAutoComplete('start of answer');
+      const result = await getGeminiAutoComplete('answer', 'start of answer');
       expect(result).toBe('');
     });
 
     it('should throw error if no API key is set', async () => {
       process.env.GEMINI_API_KEY = '';
-      await expect(getGeminiAutoComplete('start')).rejects.toThrow('Gemini API key not configured');
+      await expect(getGeminiAutoComplete('answer', 'start')).rejects.toThrow(
+        'Gemini API key not configured',
+      );
     });
   });
 });

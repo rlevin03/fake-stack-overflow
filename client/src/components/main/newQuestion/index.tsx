@@ -1,6 +1,5 @@
 import React from 'react';
 import useNewQuestion from '../../../hooks/useNewQuestion';
-import useProfileSettings from '../../../hooks/useProfileSettings'; // to read the global AI toggle for autocomplete
 import Form from '../baseComponents/form';
 import AutocompleteInput from '../baseComponents/autocompleteInput';
 import AutocompleteTextArea from '../baseComponents/autocompleteTextArea';
@@ -26,9 +25,6 @@ const NewQuestionPage: React.FC = () => {
     generateAIAnswer,
     setGenerateAIAnswer,
   } = useNewQuestion();
-
-  // Global AI toggle from profile settings affects autocomplete only.
-  const { aiToggler } = useProfileSettings();
 
   return (
     <Form>
