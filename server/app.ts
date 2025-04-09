@@ -24,14 +24,17 @@ import { registerSocketHandlers } from './socketHandlers';
 dotenv.config();
 
 const MONGO_URL = `${process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017'}/fake_so`;
-const CLIENT_URL = process.env.CLIENT_URL || 'https://cs4530-s25-605.onrender.com';
+const CLIENT_URL = (process.env.CLIENT_URL || 'https://cs4530-s25-605.onrender.com').replace(
+  /\/$/,
+  '',
+);
 const port = parseInt(process.env.PORT || '8000');
 
 const app = express();
 const server = http.createServer(app);
 const socket: FakeSOSocket = new Server(server, {
   cors: {
-    origin: CLIENT_URL,
+    origin: [CLIENT_URL, `${CLIENT_URL}/`],
     methods: ['GET', 'POST', 'PUT', 'DELETE'],
     credentials: true,
   },
@@ -74,7 +77,7 @@ process.on('SIGINT', async () => {
 app.use(
   cors({
     credentials: true,
-    origin: CLIENT_URL,
+    origin: [CLIENT_URL, `${CLIENT_URL}/`],
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
   }),
