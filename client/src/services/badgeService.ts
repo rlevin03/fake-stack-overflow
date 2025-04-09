@@ -1,7 +1,7 @@
 import { Badge } from '../types/types';
 import api from './config';
 
-const BADGE_API_URL = `${process.env.REACT_APP_SERVER_URL}/badge`;
+const BADGE_API_URL = `https://cs4530-s25-605-api.onrender.com/badge`;
 
 /**
  * Fetches badges by their IDs

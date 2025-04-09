@@ -1,7 +1,7 @@
 import { GameInstance, GameState, GameStatus, GameType } from '../types/types';
 import api from './config';
 
-const GAMES_API_URL = `${process.env.REACT_APP_SERVER_URL}/games`;
+const GAMES_API_URL = `https://cs4530-s25-605-api.onrender.com/games`;
 
 /**
  * Function to create a new game of the specified type.

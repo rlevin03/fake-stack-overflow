@@ -2,7 +2,7 @@ import { ObjectId } from 'mongodb';
 import { Answer, AnswerVoteInterface, PopulatedDatabaseAnswer } from '../types/types';
 import api from './config';
 
-const ANSWER_API_URL = `${process.env.REACT_APP_SERVER_URL}/answer`;
+const ANSWER_API_URL = `https://cs4530-s25-605-api.onrender.com/answer`;
 
 /**
  * Adds a new answer to a specific question.
