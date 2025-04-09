@@ -10,7 +10,6 @@ import {
   DatabaseQuestion,
   DatabaseTag,
   DatabaseUser,
-  Question,
   Tag,
   User,
 } from './types/types';
@@ -133,6 +132,8 @@ async function answerCreate(
     ansBy: ansBy,
     ansDateTime: ansDateTime,
     comments: comments,
+    upVotes: [],
+    downVotes: [],
   };
   return await AnswerModel.create(answerDetail);
 }
@@ -199,6 +200,12 @@ async function userCreate(
     password,
     dateJoined,
     biography: biography ?? '',
+    badges: [],
+    preferences: [],
+    aiToggler: false,
+    pointsHistory: [],
+    hideRanking: false,
+    lastActive: new Date(),
   };
 
   return await UserModel.create(userDetail);
