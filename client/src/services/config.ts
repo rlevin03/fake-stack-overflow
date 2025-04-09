@@ -14,7 +14,13 @@ const handleErr = (err: AxiosError) => {
   return Promise.reject(err);
 };
 
-const api = axios.create({ withCredentials: true });
+// Create Axios instance with proper CORS config
+const api = axios.create({
+  withCredentials: true,
+  headers: {
+    'Content-Type': 'application/json',
+  },
+});
 
 /**
  * Add a request interceptor to the Axios instance.
