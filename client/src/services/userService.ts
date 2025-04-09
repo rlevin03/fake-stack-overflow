@@ -2,7 +2,7 @@ import axios from 'axios';
 import { UserCredentials, SafeDatabaseUser, DatabaseQuestion } from '../types/types';
 import api from './config';
 
-const USER_API_URL = `${process.env.REACT_APP_SERVER_URL}/user`;
+const USER_API_URL = `https://cs4530-s25-605-api.onrender.com/user`;
 
 /**
  * Function to get users

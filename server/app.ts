@@ -24,7 +24,7 @@ import { registerSocketHandlers } from './socketHandlers';
 dotenv.config();
 
 const MONGO_URL = `${process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017'}/fake_so`;
-const CLIENT_URL = process.env.CLIENT_URL || 'http://localhost:3000';
+const CLIENT_URL = process.env.CLIENT_URL || 'cs4530-s25-605-api.onrender.com';
 const port = parseInt(process.env.PORT || '8000');
 
 const app = express();
@@ -50,9 +50,8 @@ function startServer() {
   });
 }
 
-socket.on('connection', (clientSocket) => {
+socket.on('connection', clientSocket => {
   console.log('A user connected ->', clientSocket.id);
-
 
   clientSocket.on('disconnect', () => {
     console.log('User disconnected');
