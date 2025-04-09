@@ -5,15 +5,15 @@ jest.mock('axios');
 const mockedAxios = axios as jest.Mocked<typeof axios>;
 
 describe('Gemini Service', () => {
-  const OLD_ENV = process.env;
+  const oldEnv = process.env;
 
   beforeEach(() => {
     jest.resetModules(); // clears cache
-    process.env = { ...OLD_ENV, GEMINI_API_KEY: 'test-api-key' };
+    process.env = { ...oldEnv, GEMINI_API_KEY: 'test-api-key' };
   });
 
   afterAll(() => {
-    process.env = OLD_ENV; // restore original env
+    process.env = oldEnv; // restore original env
   });
 
   describe('getGeminiResponse', () => {
@@ -30,11 +30,10 @@ describe('Gemini Service', () => {
         },
       });
 
-      const result = await getGeminiResponse(
-        'How to use hooks?',
-        'Explain React hooks in short',
-        ['react', 'javascript'],
-      );
+      const result = await getGeminiResponse('How to use hooks?', 'Explain React hooks in short', [
+        'react',
+        'javascript',
+      ]);
 
       expect(result).toBe('This is a generated answer.');
     });
@@ -81,9 +80,7 @@ describe('Gemini Service', () => {
 
     it('should throw error if no API key is set', async () => {
       process.env.GEMINI_API_KEY = '';
-      await expect(getGeminiAutoComplete('start')).rejects.toThrow(
-        'Gemini API key not configured',
-      );
+      await expect(getGeminiAutoComplete('start')).rejects.toThrow('Gemini API key not configured');
     });
   });
 });

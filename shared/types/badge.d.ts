@@ -12,7 +12,7 @@ export type BadgeNameType =
   | 'The Historian';
 
 export type BadgeDescriptionType =
-  | 'Asked 10+ questions that received at least one upvote.'
+  | 'Upvoted 10+ questions'
   | 'Provided 5+ answers'
   | 'Answered a question that was unanswered for more than 24 hours.'
   | 'Answered a question within 5 minutes of it being posted.'

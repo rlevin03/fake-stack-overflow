@@ -197,9 +197,9 @@ export const user: User = {
   username: 'user1',
   password: 'password',
   dateJoined: new Date('2024-12-03'),
-  badges: [],           // Array of ObjectId
-  biography: '',        // Optionally empty string (or undefined)
-  preferences: [],      // Array of numbers (or preset numbers)
+  badges: [], // Array of ObjectId
+  biography: '', // Optionally empty string (or undefined)
+  preferences: [], // Array of numbers (or preset numbers)
   aiToggler: false,
   pointsHistory: [],
   hideRanking: false,
