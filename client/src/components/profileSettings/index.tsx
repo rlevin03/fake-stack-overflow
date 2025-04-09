@@ -27,6 +27,8 @@ const ProfileSettings: React.FC = () => {
     handleDeleteUser,
     aiToggler,
     handleToggleAIToggler,
+    hideRanking,
+    handleToggleRankingVisibility,
   } = useProfileSettings();
 
   return (
@@ -88,6 +90,17 @@ const ProfileSettings: React.FC = () => {
               <label>
                 <input type='checkbox' checked={aiToggler} onChange={handleToggleAIToggler} />
                 Enable AI Features
+              </label>
+            </div>
+            <div className='ranking-visibility'>
+              <h4>Ranking Visibility</h4>
+              <label>
+                <input
+                  type='checkbox'
+                  checked={hideRanking}
+                  onChange={handleToggleRankingVisibility}
+                />
+                Hide Ranking
               </label>
             </div>
             {canEditProfile && <InterestsCard />}

@@ -72,19 +72,34 @@ const getGeminiAutoComplete = async (field: string, partialText: string): Promis
   let prompt = '';
   if (field === 'title') {
     prompt = `
-Complete the following question title in plain text (no bullet points or markdown), in under 50 words:
+Complete the following question title in plain text (no bullet points or markdown). 
+The final suggestion must be under 50 characters and must not repeat any portion of the already-typed text. 
+This question is about computer science. 
+You are helping the user finish writing their question title. 
+Reply with only the additional words needed to complete the title:
 ${partialText}`.trim();
   } else if (field === 'text') {
     prompt = `
-Complete the following question description in plain text (no bullet points or markdown), in under 50 words:
+Complete the following question description in plain text (no bullet points or markdown). 
+The final suggestion must be under 50 characters and must not repeat any portion of the already-typed text. 
+This question is about computer science. 
+You are helping the user finish writing their question description. 
+Reply with only the additional words needed to complete the description:
 ${partialText}`.trim();
   } else if (field === 'answer') {
     prompt = `
-Complete the following answer in plain text (no bullet points or markdown), in under 50 words:
+Complete the following answer in plain text (no bullet points or markdown). 
+The final suggestion must be under 50 characters and must not repeat any portion of the already-typed text. 
+This question is about computer science. 
+You are helping the user finish writing their answer. 
+Reply with only the additional words needed to complete the answer:
 ${partialText}`.trim();
   } else {
     prompt = `
-Complete the following text in plain text (no bullet points or markdown), in under 50 words:
+Complete the following text in plain text (no bullet points or markdown). 
+The final suggestion must be under 50 characters and must not repeat any portion of the already-typed text. 
+You are helping the user finalize their text. 
+Reply with only the additional words needed to complete it:
 ${partialText}`.trim();
   }
 
