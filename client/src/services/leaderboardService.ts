@@ -9,7 +9,7 @@ export interface LeaderboardUser {
 
 // Create a single socket connection to the server.
 // Adjust the URL if needed.
-const socket: Socket = io('https://cs4530-s25-605-api.onrender.com');
+const socket: Socket = io('https://cs4530-s25-605.onrender.com');
 
 // Helper function to get the top 10 leaderboard using websockets.
 export async function getTop10Leaderboard(): Promise<LeaderboardUser[]> {
